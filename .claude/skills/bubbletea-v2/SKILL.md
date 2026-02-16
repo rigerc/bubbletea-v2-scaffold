@@ -21,10 +21,13 @@ Every program has three responsibilities: hold state (Model), react to events (U
 
 ## Quick Reference
 
-- Full API reference → [references/API-REFERENCE.md](references/API-REFERENCE.md)
-- Common patterns → [references/PATTERNS.md](references/PATTERNS.md)
-- Architecture deep-dive → [references/ARCHITECTURE.md](references/ARCHITECTURE.md)
-- Runnable examples → [references/_examples/](references/_examples/) (60+ programs)
+- **API Reference** → [references/API-REFERENCE.md](references/API-REFERENCE.md)
+- **Key Handling** → [references/KEYS.md](references/KEYS.md)
+- **Terminal Features** → [references/TERMINAL-FEATURES.md](references/TERMINAL-FEATURES.md)
+- **View Features** → [references/VIEW-FEATURES.md](references/VIEW-FEATURES.md)
+- **Common Patterns** → [references/PATTERNS.md](references/PATTERNS.md)
+- **Architecture** → [references/ARCHITECTURE.md](references/ARCHITECTURE.md)
+- **Runnable Examples** → [references/_examples/](references/_examples/) (60+ programs)
 - **Migrating from v1?** → [references/UPGRADE_GUIDE_V2.md](references/UPGRADE_GUIDE_V2.md)
 
 ---
@@ -131,6 +134,10 @@ case tea.KeyPressMsg:
     if key.IsRepeat { /* key held down */ }
 ```
 
+**See [references/KEYS.md](references/KEYS.md) for complete key constants and patterns.**
+
+---
+
 ## Mouse Handling
 
 Enable in View, then handle messages:
@@ -150,6 +157,8 @@ case tea.MouseClickMsg:
 case tea.MouseWheelMsg:
     if msg.Button == tea.MouseWheelUp { /* scroll up */ }
 ```
+
+---
 
 ## Async Commands
 
@@ -176,6 +185,8 @@ func tick() tea.Cmd {
 }
 ```
 
+---
+
 ## View Features
 
 ```go
@@ -200,9 +211,16 @@ func (m model) View() tea.View {
     // Focus events (FocusMsg / BlurMsg)
     v.ReportFocus = true
 
+    // Keyboard enhancements (key release detection)
+    v.KeyboardEnhancements.ReportEventTypes = true
+
     return v
 }
 ```
+
+**See [references/VIEW-FEATURES.md](references/VIEW-FEATURES.md) for complete View documentation.**
+
+---
 
 ## Terminal Color Detection
 
@@ -224,6 +242,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 ```
 
+**See [references/TERMINAL-FEATURES.md](references/TERMINAL-FEATURES.md) for color, focus, and keyboard enhancement details.**
+
+---
+
 ## Program Options
 
 ```go
@@ -237,6 +259,8 @@ tea.NewProgram(model,
 )
 ```
 
+---
+
 ## Debugging
 
 ```go
@@ -249,6 +273,8 @@ TEA_TRACE=trace.log go run .
 TEA_DEBUG=true go run .
 ```
 
+---
+
 ## External Process Execution
 
 ```go
@@ -259,6 +285,8 @@ case openEditorMsg:
         return editorClosedMsg{err}
     })
 ```
+
+---
 
 ## Clipboard (OSC52)
 
@@ -272,6 +300,8 @@ return m, tea.ReadClipboard()
 case tea.ClipboardMsg:
     m.clipboardContent = string(msg)
 ```
+
+---
 
 ## Error Types
 

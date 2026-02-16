@@ -2,22 +2,35 @@
 
 ## Context
 
-`template-v2-enhanced/` is a minimal BubbleTea v2 skeleton with logging (zerolog), CLI (cobra),
-and config (koanf). The `internal/ui/model.go` is a bare 4-field model with no navigation.
-Previously deleted packages (`nav/`, `screens/`, `styles/`, `keys/`) are being replaced with a
-clean, extensible design. The goal is a stack-based router driven by `charm.land/bubbles/v2/list`
-as the primary navigation component, with adaptive lipgloss-v2 styling and the bubbles `help`/`key`
-system for keybindings.
+`template-v2-enhanced/` has a working skeleton with logging (zerolog), CLI (cobra),
+config (koanf), and **config now wired to the UI** (done in previous session — see
+`main.go:loadConfig()`, `cmd/root.go:WasLogLevelSet()`). The `internal/ui/model.go`
+is a 4-field skeleton. This plan adds a stack-based navigation router driven by
+`charm.land/bubbles/v2/list` with adaptive lipgloss-v2 styling and the bubbles
+`help`/`key` system for keybindings.
 
-## Dependencies to Add
+## Current State (Already Done — Do Not Re-implement)
 
+| What | Where | Status |
+|---|---|---|
+| `loadConfig()` with proper CLI flag priority | `main.go` | ✓ done |
+| `WasLogLevelSet()` | `cmd/root.go` | ✓ done |
+| `ui.New(cfg config.Config)` signature | `internal/ui/model.go` | ✓ done (value type, not pointer) |
+| `v.AltScreen`, `v.MouseMode` in `View()` | `internal/ui/model.go` | ✓ done |
+| `charm.land/bubbles/v2` in go.mod | `go.mod` | ✓ present (indirect only) |
+
+---
+
+## Dependencies
+
+`charm.land/lipgloss/v2` is not yet in `go.mod`. `charm.land/bubbles/v2` is indirect.
+Run once before implementing:
 ```sh
-go get charm.land/bubbles/v2
-go get charm.land/lipgloss/v2
+cd template-v2-enhanced
+go get charm.land/bubbles/v2 charm.land/lipgloss/v2
 ```
 
-Add to the `require` block in `template-v2-enhanced/go.mod`. These must match versions confirmed
-working together (see examples go.mod for version pins). `go.sum` updates automatically.
+This promotes `bubbles/v2` to direct and adds `lipgloss/v2`.
 
 ---
 
@@ -25,16 +38,16 @@ working together (see examples go.mod for version pins). `go.sum` updates automa
 
 ```
 internal/ui/
-├── model.go              [MODIFY]  — Root router; owns stack, help, AltScreen
+├── model.go              [REWRITE]  — Root router; owns stack, help, AltScreen
 ├── nav/
-│   └── nav.go           [CREATE]  — Screen interface + navigation messages
+│   └── nav.go           [CREATE]   — Screen interface + navigation messages
 ├── styles/
-│   └── styles.go        [CREATE]  — Adaptive lipgloss styles
+│   └── styles.go        [CREATE]   — Adaptive lipgloss styles
 ├── keys/
-│   └── keys.go          [CREATE]  — Global key bindings
+│   └── keys.go          [CREATE]   — Global key bindings
 └── screens/
-    ├── menu.go          [CREATE]  — List-based navigation menu
-    └── detail.go        [CREATE]  — Example scrollable content screen
+    ├── menu.go          [CREATE]   — List-based navigation menu
+    └── detail.go        [CREATE]   — Example scrollable content screen
 ```
 
 **Build order:** `keys` → `nav` → `styles` → `screens/detail` → `screens/menu` → `model`
@@ -44,8 +57,6 @@ internal/ui/
 ## File 1: `internal/ui/nav/nav.go`
 
 **Package:** `nav`
-
-### Types
 
 ```go
 // Screen is implemented by every navigable view.
@@ -69,11 +80,7 @@ type ScreenKeyMap interface {
 type PushMsg    struct{ Screen Screen }
 type PopMsg     struct{}
 type ReplaceMsg struct{ Screen Screen }
-```
 
-### Functions
-
-```go
 // Push returns a Cmd that sends PushMsg.
 func Push(s Screen) tea.Cmd { return func() tea.Msg { return PushMsg{Screen: s} } }
 
@@ -90,24 +97,23 @@ func Replace(s Screen) tea.Cmd { return func() tea.Msg { return ReplaceMsg{Scree
 
 **Package:** `keys`
 
-Implements `help.KeyMap` interface so it can be passed directly to `help.View()`.
+Implements `help.KeyMap` so it can be passed directly to `help.View()`.
 
 ```go
 type GlobalKeyMap struct {
-    Back key.Binding  // "esc"       — go to previous screen
-    Quit key.Binding  // "ctrl+c"    — always quit (avoids conflict with list filter "q")
-    Help key.Binding  // "?"         — toggle help expansion
+    Back key.Binding  // "esc"    — go to previous screen
+    Quit key.Binding  // "ctrl+c" — always quit (no conflict with list filter "q")
+    Help key.Binding  // "?"      — toggle help expansion
 }
 
 func New() GlobalKeyMap
 
 // Implements help.KeyMap:
-func (k GlobalKeyMap) ShortHelp() []key.Binding  // [Back, Quit]
-func (k GlobalKeyMap) FullHelp() [][]key.Binding // [[Back, Help], [Quit]]
+func (k GlobalKeyMap) ShortHelp() []key.Binding  { return []key.Binding{k.Back, k.Quit} }
+func (k GlobalKeyMap) FullHelp() [][]key.Binding { return [][]key.Binding{{k.Back, k.Help}, {k.Quit}} }
 ```
 
-**Critical:** `"q"` is intentionally NOT in `Quit`. The list uses `"q"` for filtering when
-`DisableQuitKeybindings()` is not called. After calling it, `"q"` types into filter input.
+**Critical:** `"q"` is intentionally NOT in `Quit`. The list uses `"q"` for filtering.
 Only `ctrl+c` is the guaranteed quit path.
 
 ---
@@ -127,27 +133,27 @@ type Theme struct {
 }
 
 // New constructs a Theme using lipgloss.LightDark(isDark) for adaptive colors.
-func New(isDark bool) Theme
+func New(isDark bool) Theme {
+    ld := lipgloss.LightDark(isDark)
+    return Theme{
+        App:   lipgloss.NewStyle().Margin(1, 2),
+        Title: lipgloss.NewStyle().Bold(true).
+                   Foreground(lipgloss.Color("#FFFDF5")).
+                   Background(lipgloss.Color("#25A065")).
+                   Padding(0, 1),
+        StatusMessage: lipgloss.NewStyle().
+                   Foreground(ld(lipgloss.Color("#04B575"), lipgloss.Color("#10CC85"))),
+        HelpBar: lipgloss.NewStyle().
+                   Foreground(ld(lipgloss.Color("#626262"), lipgloss.Color("#9B9B9B"))),
+        Detail:  lipgloss.NewStyle().Margin(0, 2),
+        Subtle:  lipgloss.NewStyle().Foreground(ld(lipgloss.Color("#9B9B9B"), lipgloss.Color("#626262"))),
+    }
+}
 
-// HelpBarHeight returns lines consumed by the help bar.
-// Short mode = 1 line, full mode = 3 lines.
-func HelpBarHeight(showAll bool) int
-```
-
-**Implementation note for `New`:**
-```go
-ld := lipgloss.LightDark(isDark)
-Theme{
-    App:   lipgloss.NewStyle().Margin(1, 2),
-    Title: lipgloss.NewStyle().Bold(true).
-               Foreground(lipgloss.Color("#FFFDF5")).
-               Background(lipgloss.Color("#25A065")).
-               Padding(0, 1),
-    StatusMessage: lipgloss.NewStyle().
-               Foreground(ld(lipgloss.Color("#04B575"), lipgloss.Color("#10CC85"))),
-    HelpBar: lipgloss.NewStyle().
-               Foreground(ld(lipgloss.Color("#626262"), lipgloss.Color("#9B9B9B"))),
-    ...
+// HelpBarHeight returns lines consumed by the help bar (1 short, 3 full).
+func HelpBarHeight(showAll bool) int {
+    if showAll { return 3 }
+    return 1
 }
 ```
 
@@ -172,19 +178,6 @@ func (i MenuItem) FilterValue() string { return i.title }
 func NewMenuItem(title, description string, action tea.Cmd) MenuItem
 ```
 
-`action` is a `tea.Cmd` capturing the target screen. When `enter` is pressed, the delegate
-returns `item.action` directly. The router interprets the resulting `nav.PushMsg`.
-
-### delegateKeyMap
-
-```go
-type delegateKeyMap struct {
-    choose key.Binding  // "enter" — select item
-}
-
-func newDelegateKeyMap() delegateKeyMap
-```
-
 ### MenuScreen struct
 
 ```go
@@ -199,41 +192,24 @@ type MenuScreen struct {
 }
 ```
 
-### MenuScreen methods
+### Critical initialization in NewMenuScreen
 
 ```go
-// NewMenuScreen creates the screen. Pass 0,0 for width/height —
-// WindowSizeMsg will call updateListSize() before first render.
-func NewMenuScreen(title string, items []list.Item, isDark bool) *MenuScreen
+func NewMenuScreen(title string, items []list.Item, isDark bool) *MenuScreen {
+    dKeys := newDelegateKeyMap()
+    d     := newMenuDelegate(dKeys, isDark)
 
-// Critical initialization sequence in NewMenuScreen:
-//   l := list.New(items, delegate, 0, 0)
-//   l.Title = title
-//   l.Styles = list.DefaultStyles(isDark)
-//   l.Styles.Title = theme.Title          // override with branded title
-//   l.DisableQuitKeybindings()             // REQUIRED: prevents list from eating "ctrl+c"/"q"
-//   l.SetShowHelp(false)                   // disable list's own help — we render it in Model
-
-func (s *MenuScreen) Init() tea.Cmd                              // returns nil
-func (s *MenuScreen) Update(msg tea.Msg) (nav.Screen, tea.Cmd)
-func (s *MenuScreen) View() string                               // s.theme.App.Render(s.list.View())
-
-// Implements nav.Themeable:
-func (s *MenuScreen) SetTheme(isDark bool)
-
-// Implements nav.ScreenKeyMap:
-func (s *MenuScreen) HelpKeys() []key.Binding  // [delegateKeys.choose]
-
-// Dynamic list items:
-func (s *MenuScreen) SetItems(items []list.Item) tea.Cmd     // list.SetItems returns Cmd
-func (s *MenuScreen) InsertItem(index int, item list.Item) tea.Cmd
-func (s *MenuScreen) RemoveItem(index int)
-
-// private:
-func (s *MenuScreen) updateListSize()
+    l := list.New(items, d, 0, 0)   // 0,0: WindowSizeMsg drives size
+    l.Title = title
+    l.Styles = list.DefaultStyles(isDark)
+    l.Styles.Title = theme.Title          // branded title override
+    l.DisableQuitKeybindings()            // REQUIRED: prevents list eating ctrl+c/q
+    l.SetShowHelp(false)                  // we render help in Model, not list
+    // ...
+}
 ```
 
-### MenuScreen.Update — ESC/Back/Filter conflict resolution
+### MenuScreen.Update — ESC/filter conflict
 
 ```go
 func (s *MenuScreen) Update(msg tea.Msg) (nav.Screen, tea.Cmd) {
@@ -248,7 +224,6 @@ func (s *MenuScreen) Update(msg tea.Msg) (nav.Screen, tea.Cmd) {
         s.theme = styles.New(s.isDark)
         s.list.Styles = list.DefaultStyles(s.isDark)
         s.list.Styles.Title = s.theme.Title
-        // Recreate delegate with updated styles:
         d := list.NewDefaultDelegate()
         d.Styles = list.NewDefaultItemStyles(s.isDark)
         d.UpdateFunc = ...   // same delegate logic, new styles
@@ -256,13 +231,9 @@ func (s *MenuScreen) Update(msg tea.Msg) (nav.Screen, tea.Cmd) {
         return s, nil
 
     case tea.KeyPressMsg:
-        // ESC: pop stack only when NOT filtering
-        if msg.String() == "esc" {
-            switch s.list.FilterState() {
-            case list.Unfiltered:
-                return s, nav.Pop()
-            // list.Filtering, list.FilterApplied: fall through to list.Update
-            }
+        // ESC pops stack ONLY when not filtering
+        if msg.String() == "esc" && s.list.FilterState() == list.Unfiltered {
+            return s, nav.Pop()
         }
     }
 
@@ -272,7 +243,7 @@ func (s *MenuScreen) Update(msg tea.Msg) (nav.Screen, tea.Cmd) {
 }
 ```
 
-### updateListSize — dynamic list height
+### updateListSize — dynamic height
 
 ```go
 func (s *MenuScreen) updateListSize() {
@@ -282,16 +253,11 @@ func (s *MenuScreen) updateListSize() {
 }
 ```
 
-**This is the core of dynamic height support.** Called on every `WindowSizeMsg` and whenever
-`helpExpanded` toggles. The help bar's vertical footprint is subtracted from the list height.
+Called on every `WindowSizeMsg` and whenever `helpExpanded` toggles.
 
 ### Delegate
 
 ```go
-// newMenuDelegate creates a list.DefaultDelegate with:
-// - UpdateFunc: on "enter", returns item.action (the navigation Cmd)
-// - ShortHelpFunc: [choose binding]
-// - FullHelpFunc: [[choose binding]]
 func newMenuDelegate(dKeys delegateKeyMap, isDark bool) list.DefaultDelegate {
     d := list.NewDefaultDelegate()
     d.Styles = list.NewDefaultItemStyles(isDark)
@@ -325,7 +291,7 @@ type DetailScreen struct {
     isDark         bool
     width, height  int
     vp             viewport.Model
-    ready          bool   // false until first WindowSizeMsg
+    ready          bool  // false until first WindowSizeMsg
 }
 
 func NewDetailScreen(title, content string, isDark bool) *DetailScreen
@@ -338,10 +304,10 @@ func (s *DetailScreen) View() string
 func (s *DetailScreen) SetTheme(isDark bool)
 
 func (s *DetailScreen) SetContent(content string)  // update viewport content
-func (s *DetailScreen) headerView() string          // private: renders title bar
+func (s *DetailScreen) headerView() string         // private: renders title bar
 ```
 
-### DetailScreen.Update
+### WindowSizeMsg handling
 
 ```go
 case tea.WindowSizeMsg:
@@ -358,15 +324,15 @@ case tea.WindowSizeMsg:
 
 case tea.KeyPressMsg:
     if key.Matches(msg, s.keys.Back) {
-        return s, nav.Pop()   // always pop — no filter state to check
+        return s, nav.Pop()
     }
 ```
 
-Viewport receives remaining keys for scroll (j/k, PageUp/Down, etc.).
+Viewport receives remaining messages for scroll (j/k, PageUp/Down, etc.).
 
+Viewport constructor (v2 changed from v1):
 ```go
-// Use viewport.New() with options in v2:
-s.vp = viewport.New()
+s.vp = viewport.New()   // no positional args in v2
 s.vp.MouseWheelEnabled = true
 ```
 
@@ -375,6 +341,9 @@ s.vp.MouseWheelEnabled = true
 ## File 6: `internal/ui/model.go` (Rewrite)
 
 **Package:** `ui`
+
+**Note on signature:** Current `New(cfg config.Config)` takes a **value type** (not `*config.Config`
+as in the original plan). Keep the value type. In `main.go`, the call is already `ui.New(*cfg)`.
 
 ### Model struct
 
@@ -387,15 +356,18 @@ type Model struct {
     help          help.Model
     keys          keys.GlobalKeyMap
     helpExpanded  bool
+    // from config (extracted from config.Config at construction):
+    altScreen    bool   // cfg.UI.AltScreen
+    mouseEnabled bool   // cfg.UI.MouseEnabled
+    windowTitle  string // cfg.App.Title
 }
 ```
 
 ### New()
 
 ```go
-// New accepts the loaded config so UI behaviour respects config.UI.AltScreen,
-// config.UI.MouseEnabled, and config.App.Title.
-func New(cfg *config.Config) Model {
+// New accepts config.Config (value type — main.go passes *cfg dereferenced).
+func New(cfg config.Config) Model {
     globalKeys := keys.New()
 
     items := []list.Item{
@@ -448,35 +420,30 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
         if key.Matches(msg, m.keys.Help) {
             m.helpExpanded = !m.helpExpanded
             m.help.ShowAll = m.helpExpanded
-            m.notifyActiveScreenResize()   // re-sends WindowSizeMsg to active screen
+            m.notifyActiveScreenResize()
             return m, nil
         }
 
     case tea.WindowSizeMsg:
         m.width, m.height = msg.Width, msg.Height
-        m.help.Width = msg.Width   // Note: Width field, not a method (bubbles v2 help)
+        m.help.Width = msg.Width   // Width is a field, not a method
         // fall through to delegate to active screen
 
     case tea.BackgroundColorMsg:
         m.isDark = msg.IsDark()
         m.help.Styles = help.DefaultStyles(m.isDark)
-        // Propagate theme to ALL screens in stack (not just top)
+        // Propagate theme to ALL screens in stack
         for i := range m.screens {
             if t, ok := m.screens[i].(nav.Themeable); ok {
                 t.SetTheme(m.isDark)
             }
         }
-        // fall through to deliver msg to active screen too
+        // fall through to deliver msg to active screen
 
     case nav.PushMsg:
         s := msg.Screen
-        if cmd := s.Init(); cmd != nil {
-            cmds = append(cmds, cmd)
-        }
-        // Inject current theme and dimensions immediately
-        if t, ok := s.(nav.Themeable); ok {
-            t.SetTheme(m.isDark)
-        }
+        if cmd := s.Init(); cmd != nil { cmds = append(cmds, cmd) }
+        if t, ok := s.(nav.Themeable); ok { t.SetTheme(m.isDark) }
         s, cmd := s.Update(tea.WindowSizeMsg{Width: m.width, Height: m.height})
         cmds = append(cmds, cmd)
         m.screens = append(m.screens, s)
@@ -510,7 +477,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 ```
 
-### View() — final assembly
+### View()
 
 ```go
 func (m Model) View() tea.View {
@@ -524,19 +491,18 @@ func (m Model) View() tea.View {
     }
 
     helpView := m.help.View(m.buildKeyMap())
-
-    content := lipgloss.JoinVertical(lipgloss.Left, screenContent, helpView)
+    content  := lipgloss.JoinVertical(lipgloss.Left, screenContent, helpView)
 
     v := tea.NewView(content)
-    v.AltScreen   = m.altScreen    // from config.UI.AltScreen (default: false)
-    v.WindowTitle = m.windowTitle  // from config.App.Title
-    if m.mouseEnabled {            // from config.UI.MouseEnabled (default: true)
+    v.AltScreen   = m.altScreen     // from cfg.UI.AltScreen
+    v.WindowTitle = m.windowTitle   // from cfg.App.Title
+    if m.mouseEnabled {             // from cfg.UI.MouseEnabled
         v.MouseMode = tea.MouseModeCellMotion
     }
     return v
 }
 
-// buildKeyMap merges global keys with active screen's keys for the help bar.
+// buildKeyMap merges global keys + active screen's extra bindings for the help bar.
 func (m Model) buildKeyMap() help.KeyMap {
     var extra []key.Binding
     if len(m.screens) > 0 {
@@ -547,8 +513,8 @@ func (m Model) buildKeyMap() help.KeyMap {
     return combinedKeyMap{global: m.keys, extra: extra}
 }
 
-// notifyActiveScreenResize re-sends WindowSizeMsg to the active screen
-// so it can recalculate its component height after help bar changes.
+// notifyActiveScreenResize re-sends WindowSizeMsg so active screen recalculates
+// height after help bar height changes (? toggle).
 func (m *Model) notifyActiveScreenResize() {
     if len(m.screens) == 0 { return }
     top := m.screens[len(m.screens)-1]
@@ -557,12 +523,11 @@ func (m *Model) notifyActiveScreenResize() {
 }
 
 // combinedKeyMap merges GlobalKeyMap + active screen's extra bindings.
-// Unexported type, local to model.go.
 type combinedKeyMap struct {
     global keys.GlobalKeyMap
     extra  []key.Binding
 }
-func (c combinedKeyMap) ShortHelp() []key.Binding { return append(c.global.ShortHelp(), c.extra...) }
+func (c combinedKeyMap) ShortHelp() []key.Binding  { return append(c.global.ShortHelp(), c.extra...) }
 func (c combinedKeyMap) FullHelp() [][]key.Binding {
     full := c.global.FullHelp()
     if len(c.extra) > 0 { full = append(full, c.extra) }
@@ -572,28 +537,47 @@ func (c combinedKeyMap) FullHelp() [][]key.Binding {
 
 ---
 
+## Files to Create/Modify
+
+| File | Action | Notes |
+|---|---|---|
+| `go.mod` / `go.sum` | MODIFY | `go get charm.land/bubbles/v2 charm.land/lipgloss/v2` |
+| `internal/ui/model.go` | REWRITE | Stack router replaces skeleton |
+| `internal/ui/nav/nav.go` | CREATE | Screen interface + nav messages |
+| `internal/ui/styles/styles.go` | CREATE | Adaptive lipgloss theme |
+| `internal/ui/keys/keys.go` | CREATE | Global key bindings (help.KeyMap) |
+| `internal/ui/screens/menu.go` | CREATE | List-based navigation menu |
+| `internal/ui/screens/detail.go` | CREATE | Scrollable text detail screen |
+| `main.go` | **UNCHANGED** | Already complete with loadConfig() |
+| `cmd/root.go` | **UNCHANGED** | Already has WasLogLevelSet() |
+| `config/` | **UNCHANGED** | Already complete |
+
+---
+
 ## Critical Implementation Notes
 
 | Issue | Resolution |
 |---|---|
-| `list.DisableQuitKeybindings()` | MUST be called in `NewMenuScreen` or list will intercept `ctrl+c`/`q` |
-| `l.SetShowHelp(false)` | MUST be set so the list doesn't render its own help bar underneath ours |
-| `list.New(items, delegate, 0, 0)` | Always 0,0 — `WindowSizeMsg` drives sizing via `updateListSize()` |
-| `list.SetItems` returns `tea.Cmd` | Never ignore this return — it contains a status message animation |
-| `help.Width` is a field, not method | `m.help.Width = msg.Width`, not `m.help.SetWidth()` |
-| `list.DefaultStyles(isDark bool)` | Must be called with correct `isDark`; zero value `false` OK as initial |
+| `list.DisableQuitKeybindings()` | MUST be called or list intercepts `ctrl+c`/`q` |
+| `l.SetShowHelp(false)` | MUST be set — we render help in Model, not list |
+| `list.New(items, d, 0, 0)` | Always 0,0 — `WindowSizeMsg` drives size via `updateListSize()` |
+| `list.SetItems` returns `tea.Cmd` | Never ignore — contains status message animation |
+| `help.Width` is a field, not a method | `m.help.Width = msg.Width`, not `m.help.SetWidth()` |
+| `list.DefaultStyles(isDark bool)` | Must pass correct `isDark`; `false` is OK as initial |
 | `list.NewDefaultItemStyles(isDark)` | Same — update in `SetTheme()` by recreating delegate |
 | ESC in menu | Check `list.FilterState() == list.Unfiltered` before calling `nav.Pop()` |
-| Theme on new screens | Inject via `nav.Themeable.SetTheme()` + send `WindowSizeMsg` immediately on push |
+| Theme on new screens | Inject via `nav.Themeable.SetTheme()` + send `WindowSizeMsg` on push |
 | Viewport in v2 | `viewport.New()` with no positional args (changed from v1) |
+| `ui.New()` signature | Value type: `New(cfg config.Config)`, not `New(cfg *config.Config)` |
 
 ---
 
 ## Verification
 
 ```sh
-# 1. Add dependencies
 cd template-v2-enhanced
+
+# 1. Add dependencies
 go get charm.land/bubbles/v2 charm.land/lipgloss/v2
 
 # 2. Build all packages
@@ -614,96 +598,8 @@ go run .
 # 4. Run with debug logging
 go run . --debug
 tail -f debug.log
+
+# 5. Config flag still works (no regression from previous session)
+go run . --config assets/config.default.json
+go run . version
 ```
-
-## Config Integration (AltScreen + Mouse + Window Title)
-
-`config.UIConfig` has `AltScreen bool`, `MouseEnabled bool`, and `ThemeName string` fields.
-`config.AppConfig` has `Title string` (window title). These must flow into `Model`.
-
-### Change: `main.go` loads config and passes it to `ui.New()`
-
-```go
-// In main(), after initLogger() and before ui.Run():
-cfg := loadConfig()   // new helper in main.go
-if err := ui.Run(ui.New(cfg)); err != nil { ... }
-
-// loadConfig tries cfgFile path, falls back to defaults (no error on missing file)
-func loadConfig() *config.Config {
-    if path := cmd.GetConfigFile(); path != "" {
-        if c, err := config.Load(path); err == nil {
-            return c
-        }
-    }
-    return config.DefaultConfig()
-}
-```
-
-### Change: `ui.New()` signature
-
-```go
-// New creates a Model configured from cfg.
-func New(cfg *config.Config) Model {
-    // ...
-    return Model{
-        screens:      []nav.Screen{root},
-        help:         h,
-        keys:         globalKeys,
-        altScreen:    cfg.UI.AltScreen,
-        mouseEnabled: cfg.UI.MouseEnabled,
-        windowTitle:  cfg.App.Title,
-    }
-}
-```
-
-### Change: `Model` struct adds UI config fields
-
-```go
-type Model struct {
-    screens      []nav.Screen
-    width, height int
-    isDark        bool
-    quitting      bool
-    help          help.Model
-    keys          keys.GlobalKeyMap
-    helpExpanded  bool
-    // from config:
-    altScreen    bool   // config.UI.AltScreen
-    mouseEnabled bool   // config.UI.MouseEnabled
-    windowTitle  string // config.App.Title
-}
-```
-
-### Change: `Model.View()` uses config values
-
-```go
-func (m Model) View() tea.View {
-    if m.quitting { return tea.NewView("") }
-    // ... assemble content ...
-    v := tea.NewView(content)
-    v.AltScreen   = m.altScreen    // NOT hardcoded true
-    v.WindowTitle = m.windowTitle
-    if m.mouseEnabled {
-        v.MouseMode = tea.MouseModeCellMotion
-    }
-    return v
-}
-```
-
----
-
-## Files to Modify vs Create
-
-| File | Action | Description |
-|------|--------|-------------|
-| `go.mod` | MODIFY | Add bubbles/v2 and lipgloss/v2 |
-| `go.sum` | MODIFY | Updated by `go get` |
-| `main.go` | MODIFY | Add `loadConfig()`, pass cfg to `ui.New(cfg)` |
-| `internal/ui/model.go` | REWRITE | Stack router replaces skeleton |
-| `internal/ui/nav/nav.go` | CREATE | Screen interface + nav messages |
-| `internal/ui/styles/styles.go` | CREATE | Adaptive lipgloss theme |
-| `internal/ui/keys/keys.go` | CREATE | Global key bindings (help.KeyMap) |
-| `internal/ui/screens/menu.go` | CREATE | List-based navigation menu |
-| `internal/ui/screens/detail.go` | CREATE | Scrollable text detail screen |
-
-`cmd/`, `config/`, `internal/logger/` are **unchanged**.
