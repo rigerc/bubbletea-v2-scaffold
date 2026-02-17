@@ -15,17 +15,18 @@ import (
 // Embed it in your Screen struct and call its helpers to avoid repeating
 // layout and theming boilerplate.
 type ScreenBase struct {
-	Theme  styles.Theme
-	IsDark bool
-	Width  int
-	Height int
-	Keys   appkeys.GlobalKeyMap
-	Help   help.Model
+	Theme   styles.Theme
+	IsDark  bool
+	Width   int
+	Height  int
+	Keys    appkeys.GlobalKeyMap
+	Help    help.Model
+	AppName string // application name shown in every screen's header badge
 }
 
 // NewBase initialises a ScreenBase for the given terminal background.
-func NewBase(isDark bool) ScreenBase {
-	b := ScreenBase{Keys: appkeys.New(), Help: help.New()}
+func NewBase(isDark bool, appName string) ScreenBase {
+	b := ScreenBase{Keys: appkeys.New(), Help: help.New(), AppName: appName}
 	b.ApplyTheme(isDark)
 	return b
 }
@@ -49,13 +50,18 @@ func (b *ScreenBase) IsSized() bool {
 	return b.Width > 0 && b.Height > 0
 }
 
-// HeaderView renders a title badge followed by a horizontal rule that fills
-// the remaining content width. Use it as the first row of your View().
-func (b *ScreenBase) HeaderView(title string) string {
-	t := b.Theme.Title.Padding(1, 2).Render(title)
+// HeaderView renders the app name badge followed by a horizontal rule that
+// fills the remaining content width. Visible on every screen.
+// The bottom margin creates consistent spacing between the header and the
+// screen content below; all sizing calculations use lipgloss.Height() on
+// this output so the space is automatically accounted for.
+func (b *ScreenBase) HeaderView() string {
+	t := b.Theme.Title.Padding(1, 2).Render(b.AppName)
 	lineW := max(0, b.ContentWidth()-lipgloss.Width(t))
 	line := b.Theme.Subtle.Render(strings.Repeat("─", lineW))
-	return lipgloss.JoinHorizontal(lipgloss.Center, t, line)
+	return lipgloss.NewStyle().MarginBottom(1).Render(
+		lipgloss.JoinHorizontal(lipgloss.Center, t, line),
+	)
 }
 
 // RenderHelp renders the help bar from any help.KeyMap, with a top margin.

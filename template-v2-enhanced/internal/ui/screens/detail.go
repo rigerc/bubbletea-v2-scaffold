@@ -42,13 +42,13 @@ type DetailScreen struct {
 }
 
 // NewDetailScreen creates a new DetailScreen with the given title and content.
-func NewDetailScreen(title, content string, isDark bool) *DetailScreen {
+func NewDetailScreen(title, content string, isDark bool, appName string) *DetailScreen {
 	vp := viewport.New()
 	vp.MouseWheelEnabled = true
 	vp.SoftWrap = true
 
 	return &DetailScreen{
-		ScreenBase: NewBase(isDark),
+		ScreenBase: NewBase(isDark, appName),
 		title:      title,
 		content:    content,
 		vp:         vp,
@@ -96,7 +96,7 @@ func (s *DetailScreen) View() string {
 	helpKeys := detailHelpKeys{vp: s.vp.KeyMap, app: s.Keys}
 	return s.Theme.App.Render(
 		lipgloss.JoinVertical(lipgloss.Left,
-			s.HeaderView(s.title),
+			s.HeaderView(),
 			s.vp.View(),
 			s.footerView(),
 			s.RenderHelp(helpKeys),
@@ -153,7 +153,7 @@ func (s *DetailScreen) updateViewportSize() {
 	}
 	_, frameV := s.Theme.App.GetFrameSize()
 	s.Help.SetWidth(s.ContentWidth())
-	headerH := lipgloss.Height(s.HeaderView(s.title))
+	headerH := lipgloss.Height(s.HeaderView())
 	footerH := lipgloss.Height(s.footerView())
 
 	// Help sits below the footer (outside the pager block) so is not subtracted here.

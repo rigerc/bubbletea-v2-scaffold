@@ -55,7 +55,7 @@ type FilePickerScreen struct {
 }
 
 // NewFilePickerScreen creates a new FilePickerScreen rooted at startDir.
-func NewFilePickerScreen(startDir string, isDark bool) *FilePickerScreen {
+func NewFilePickerScreen(startDir string, isDark bool, appName string) *FilePickerScreen {
 	fp := filepicker.New()
 	fp.CurrentDirectory = startDir
 	fp.AutoHeight = false
@@ -66,7 +66,7 @@ func NewFilePickerScreen(startDir string, isDark bool) *FilePickerScreen {
 	fp.KeyMap.Back.SetHelp("h", "back")
 
 	return &FilePickerScreen{
-		ScreenBase: NewBase(isDark),
+		ScreenBase: NewBase(isDark, appName),
 		fp:         fp,
 	}
 }
@@ -97,7 +97,7 @@ func (s *FilePickerScreen) Update(msg tea.Msg) (nav.Screen, tea.Cmd) {
 			s.statusMsg = "Error: " + msg.err.Error()
 			return s, nil
 		}
-		return s, nav.Push(NewDetailScreen(msg.path, msg.content, s.IsDark))
+		return s, nav.Push(NewDetailScreen(msg.path, msg.content, s.IsDark, s.AppName))
 	}
 
 	var cmd tea.Cmd
@@ -120,7 +120,7 @@ func (s *FilePickerScreen) View() string {
 	helpKeys := filePickerHelpKeys{fp: s.fp.KeyMap, app: s.Keys}
 	return s.Theme.App.Render(
 		lipgloss.JoinVertical(lipgloss.Left,
-			s.HeaderView("Browse Files"),
+			s.HeaderView(),
 			s.statusView(),
 			s.fp.View(),
 			s.RenderHelp(helpKeys),
@@ -151,7 +151,7 @@ func (s *FilePickerScreen) updateSize() {
 		return
 	}
 	_, frameV := s.Theme.App.GetFrameSize()
-	headerH := lipgloss.Height(s.HeaderView("Browse Files"))
+	headerH := lipgloss.Height(s.HeaderView())
 	statusH := lipgloss.Height(s.statusView())
 
 	fpH := s.Height - frameV - headerH - statusH

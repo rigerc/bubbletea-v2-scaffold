@@ -2,6 +2,7 @@
 package screens
 
 import (
+	lipgloss "charm.land/lipgloss/v2"
 	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
@@ -86,12 +87,12 @@ type MenuScreen struct {
 	delegateKeys delegateKeyMap
 }
 
-// NewMenuScreen creates a new MenuScreen with the given title and items.
+// NewMenuScreen creates a new MenuScreen with the given items.
 // The isDark parameter should be false initially; the correct value will be
 // set via SetTheme when the screen is pushed onto the stack.
-func NewMenuScreen(title string, items []list.Item, isDark bool) *MenuScreen {
+func NewMenuScreen(items []list.Item, isDark bool, appName string) *MenuScreen {
 	s := &MenuScreen{
-		ScreenBase:   NewBase(isDark),
+		ScreenBase:   NewBase(isDark, appName),
 		delegateKeys: newDelegateKeyMap(),
 	}
 	// Use true as the initial isDark to match the library's own default (which
@@ -100,10 +101,9 @@ func NewMenuScreen(title string, items []list.Item, isDark bool) *MenuScreen {
 	d := newMenuDelegate(s.delegateKeys, true)
 
 	l := list.New(items, d, 0, 0) // 0,0: WindowSizeMsg drives size
-	l.Title = title
+	l.SetShowTitle(false)          // HeaderView() renders the shared app-branded header
 	l.Styles = list.DefaultStyles(isDark)
-	l.Styles.Title = s.Theme.Title // branded title override
-	l.DisableQuitKeybindings()     // REQUIRED: prevents list eating ctrl+c/q
+	l.DisableQuitKeybindings() // REQUIRED: prevents list eating ctrl+c/q
 	s.list = l
 
 	return s
@@ -133,9 +133,14 @@ func (s *MenuScreen) Update(msg tea.Msg) (nav.Screen, tea.Cmd) {
 	return s, cmd
 }
 
-// View renders the menu list wrapped with the theme's margin style.
+// View renders the shared header above the menu list.
 func (s *MenuScreen) View() string {
-	return s.Theme.App.Render(s.list.View())
+	return s.Theme.App.Render(
+		lipgloss.JoinVertical(lipgloss.Left,
+			s.HeaderView(),
+			s.list.View(),
+		),
+	)
 }
 
 // SetTheme updates the screen's theme based on the terminal background.
@@ -143,20 +148,20 @@ func (s *MenuScreen) View() string {
 func (s *MenuScreen) SetTheme(isDark bool) {
 	s.ApplyTheme(isDark)
 	s.list.Styles = list.DefaultStyles(s.IsDark)
-	s.list.Styles.Title = s.Theme.Title
 	s.list.SetDelegate(newMenuDelegate(s.delegateKeys, s.IsDark))
 }
 
-// updateListSize recalculates the list dimensions based on window size
-// and theme frame. Height accounts for title, items (with descriptions), and help.
+// updateListSize recalculates the list dimensions based on window size,
+// theme frame, and the shared header height.
 func (s *MenuScreen) updateListSize() {
 	if !s.IsSized() {
 		return
 	}
 	frameH, frameV := s.Theme.App.GetFrameSize()
+	headerH := lipgloss.Height(s.HeaderView())
 
-	// Calculate available height after frame
-	availH := s.Height - frameV
+	// Calculate available height after frame and header
+	availH := s.Height - frameV - headerH
 
 	// Get actual item count (not filtered)
 	itemCount := len(s.list.Items())
@@ -165,11 +170,10 @@ func (s *MenuScreen) updateListSize() {
 	}
 
 	// Each item is 2 lines when description is shown (title + description)
-	// Add space for title bar (1 line) + help section (4 lines)
+	// Add space for help section (4 lines)
 	itemLines := itemCount * 4
-	titleLines := 1
 	helpLines := 4
-	targetH := itemLines + titleLines + helpLines
+	targetH := itemLines + helpLines
 
 	// Clamp to available height
 	if targetH > availH {

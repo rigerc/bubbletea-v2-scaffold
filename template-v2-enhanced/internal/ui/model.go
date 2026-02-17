@@ -128,14 +128,14 @@ Press ESC to return to the menu.`
 	// Create menu items.
 	items := []list.Item{
 		screens.NewMenuItem("Details", "View a detail screen",
-			nav.Push(screens.NewDetailScreen("Details", detailContent, false))),
+			nav.Push(screens.NewDetailScreen("Details", detailContent, false, cfg.App.Name))),
 		screens.NewMenuItem("Browse Files", "Browse the filesystem",
-			nav.Push(screens.NewFilePickerScreen(".", false))),
+			nav.Push(screens.NewFilePickerScreen(".", false, cfg.App.Name))),
 		screens.NewMenuItem("About", "About this application",
-			nav.Push(screens.NewDetailScreen("About", aboutContent, false))),
+			nav.Push(screens.NewDetailScreen("About", aboutContent, false, cfg.App.Name))),
 	}
 
-	root := screens.NewMenuScreen(cfg.App.Title, items, false)
+	root := screens.NewMenuScreen(items, false, cfg.App.Name)
 
 	return Model{
 		screens:      []nav.Screen{root},
