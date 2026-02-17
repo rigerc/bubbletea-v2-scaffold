@@ -38,14 +38,57 @@ type Model struct {
 // It accepts config.Config as a value type (main.go passes *cfg dereferenced).
 func New(cfg config.Config) Model {
 	// Define sample content for detail screens.
-	detailContent := `This is a detail screen.
+	detailContent := `This is a detail screen with scrollable content.
 
-You can scroll this content using:
-  • j/k or up/down arrows — line by line
-  • page up/down       — page by page
-  • home/end           — jump to top/bottom
+Scroll controls:
+  • j / ↓        — line down
+  • k / ↑        — line up
+  • d / page down — half page down
+  • u / page up   — half page up
+  • g / home      — top
+  • G / end       — bottom
+  • mouse wheel   — scroll
 
-Press ESC to return to the menu.`
+Press ESC to return to the menu.
+
+─────────────────────────────────────
+
+Section 1 — Lorem Ipsum
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod
+tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam,
+quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo.
+
+Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore
+eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident.
+
+─────────────────────────────────────
+
+Section 2 — More Filler
+
+Sunt in culpa qui officia deserunt mollit anim id est laborum. Curabitur
+pretium tincidunt lacus. Nulla gravida orci a odio. Nullam varius, turpis
+molestie pretium placerat, arcu ante tincidunt purus, vel bibendum nisi.
+
+Pellentesque habitant morbi tristique senectus et netus et malesuada fames
+ac turpis egestas. Vestibulum tortor quam, feugiat vitae, ultricies eget,
+tempor sit amet, ante. Donec eu libero sit amet quam egestas semper.
+
+─────────────────────────────────────
+
+Section 3 — Even More
+
+Aenean ultricies mi vitae est. Mauris placerat eleifend leo. Quisque sit
+amet est et sapien ullamcorper pharetra. Vestibulum erat wisi, condimentum
+sed, commodo vitae, ornare sit amet, wisi. Aenean fermentum, elit eget
+tincidunt condimentum, eros ipsum rutrum orci.
+
+Nullam venenatis felis eu purus vestibulum, nec malesuada nisl iaculis.
+Fusce aliquet purus vel mauris pharetra, a condimentum lectus tincidunt.
+
+─────────────────────────────────────
+
+End of content.`
 
 	aboutContent := `template-v2-enhanced
 
@@ -53,7 +96,7 @@ A BubbleTea v2 skeleton application with:
   • Stack-based navigation
   • Adaptive light/dark theming
   • List-based menu navigation
-  • Scrollable detail screens
+  • Scrollable detail screens with capped height
 
 Built with:
   • charm.land/bubbletea/v2
@@ -63,12 +106,31 @@ Built with:
   • github.com/knadh/koanf/v2
   • github.com/rs/zerolog
 
+─────────────────────────────────────
+
+Architecture
+
+The application uses a stack-based navigator (internal/ui/nav). Each screen
+implements the nav.Screen interface (Init / Update / View). The root model
+holds the stack and fans messages out to the active screen.
+
+Theme detection uses tea.RequestBackgroundColor, which fires a
+tea.BackgroundColorMsg carrying the terminal's actual background colour.
+Screens implement nav.Themeable to receive isDark updates.
+
+Config is loaded via koanf: defaults → config file → env vars → flags.
+Logging uses zerolog with a file sink so it doesn't interfere with the TUI.
+
+─────────────────────────────────────
+
 Press ESC to return to the menu.`
 
 	// Create menu items.
 	items := []list.Item{
 		screens.NewMenuItem("Details", "View a detail screen",
 			nav.Push(screens.NewDetailScreen("Details", detailContent, false))),
+		screens.NewMenuItem("Browse Files", "Browse the filesystem",
+			nav.Push(screens.NewFilePickerScreen(".", false))),
 		screens.NewMenuItem("About", "About this application",
 			nav.Push(screens.NewDetailScreen("About", aboutContent, false))),
 	}

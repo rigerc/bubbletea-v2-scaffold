@@ -10,7 +10,8 @@
       "Skill(bubbles-v2)",
       "Bash(go list:*)",
       "Bash(go mod download:*)",
-      "Bash(timeout 2 go run:*)"
+      "Bash(timeout 2 go run:*)",
+      "Bash(grep:*)"
     ]
   }
 }

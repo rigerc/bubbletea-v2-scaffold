@@ -2,6 +2,9 @@
 package screens
 
 import (
+	"fmt"
+	"strings"
+
 	lipglossv2 "charm.land/lipgloss/v2"
 	"charm.land/bubbles/v2/help"
 	"charm.land/bubbles/v2/key"
@@ -13,7 +16,25 @@ import (
 	"template-v2-enhanced/internal/ui/styles"
 )
 
-// DetailScreen displays scrollable text content with a header bar and help footer.
+// detailHelpKeys implements help.KeyMap by combining the viewport scroll
+// bindings with the global app bindings (esc, ?) for the help bar.
+type detailHelpKeys struct {
+	vp  viewport.KeyMap
+	app appkeys.GlobalKeyMap
+}
+
+func (k detailHelpKeys) ShortHelp() []key.Binding {
+	return []key.Binding{k.vp.Up, k.vp.Down, k.app.Back, k.app.Help}
+}
+
+func (k detailHelpKeys) FullHelp() [][]key.Binding {
+	return [][]key.Binding{
+		{k.vp.Up, k.vp.Down, k.vp.HalfPageUp, k.vp.HalfPageDown},
+		{k.vp.PageUp, k.vp.PageDown, k.app.Back, k.app.Help},
+	}
+}
+
+// DetailScreen displays scrollable text content with a pager-style header and footer.
 // It implements nav.Screen and nav.Themeable.
 type DetailScreen struct {
 	title, content string
@@ -27,11 +48,10 @@ type DetailScreen struct {
 }
 
 // NewDetailScreen creates a new DetailScreen with the given title and content.
-// The isDark parameter should be false initially; the correct value will be
-// set via SetTheme when the screen is pushed onto the stack.
 func NewDetailScreen(title, content string, isDark bool) *DetailScreen {
 	vp := viewport.New()
 	vp.MouseWheelEnabled = true
+	vp.SoftWrap = true
 
 	h := help.New()
 	h.Styles = help.DefaultStyles(isDark)
@@ -59,6 +79,7 @@ func (s *DetailScreen) Update(msg tea.Msg) (nav.Screen, tea.Cmd) {
 		s.width, s.height = msg.Width, msg.Height
 		s.updateViewportSize()
 		if !s.ready {
+			s.applyGutter()
 			s.vp.SetContent(s.content)
 			s.ready = true
 		}
@@ -74,32 +95,35 @@ func (s *DetailScreen) Update(msg tea.Msg) (nav.Screen, tea.Cmd) {
 		}
 	}
 
-	// Always pass messages to the viewport for scroll handling.
 	var cmd tea.Cmd
 	s.vp, cmd = s.vp.Update(msg)
 	return s, cmd
 }
 
-// View renders the detail screen: header, scrollable content, help footer.
+// View renders the detail screen: pager-style header, scrollable viewport, footer.
 func (s *DetailScreen) View() string {
 	if !s.ready {
 		return "Loading..."
 	}
+	helpKeys := detailHelpKeys{vp: s.vp.KeyMap, app: s.keys}
+	helpView := lipglossv2.NewStyle().MarginTop(1).Render(s.help.View(helpKeys))
 	return s.theme.App.Render(
 		lipglossv2.JoinVertical(lipglossv2.Left,
 			s.headerView(),
 			s.vp.View(),
-			s.help.View(s.keys),
+			s.footerView(),
+			helpView,
 		),
 	)
 }
 
-// SetTheme updates the screen's theme and help styles based on the terminal background.
+// SetTheme updates the screen's theme based on the terminal background.
 // Implements nav.Themeable.
 func (s *DetailScreen) SetTheme(isDark bool) {
 	s.isDark = isDark
 	s.theme = styles.New(isDark)
 	s.help.Styles = help.DefaultStyles(isDark)
+	s.applyGutter()
 }
 
 // SetContent updates the viewport content.
@@ -110,22 +134,75 @@ func (s *DetailScreen) SetContent(content string) {
 	}
 }
 
+// headerView renders the theme title badge with a horizontal rule extending to the right.
+// Vertical padding is increased relative to the shared Title style to give the
+// header more visual weight (terminals have no font-size; padding is the lever).
+//
+//	 Title  ────────────────────────────────
+//	(green, tall)
+func (s *DetailScreen) headerView() string {
+	title := s.theme.Title.Padding(1, 2).Render(s.title)
+	lineW := max(0, s.contentWidth()-lipglossv2.Width(title))
+	line := s.theme.Subtle.Render(strings.Repeat("─", lineW))
+	return lipglossv2.JoinHorizontal(lipglossv2.Center, title, line)
+}
+
+// footerView renders a horizontal rule with a scroll-percentage badge on the right.
+//
+//	──────────────────────────────────┤  42%  │
+//	                                  ╰───────╯
+func (s *DetailScreen) footerView() string {
+	b := lipglossv2.RoundedBorder()
+	b.Left = "┤"
+	info := lipglossv2.NewStyle().
+		BorderStyle(b).
+		BorderForeground(lipglossv2.Color("#25A065")).
+		Padding(0, 1).
+		Render(fmt.Sprintf("%3.f%%", s.vp.ScrollPercent()*100))
+
+	lineW := max(0, s.contentWidth()-lipglossv2.Width(info))
+	line := s.theme.Subtle.Render(strings.Repeat("─", lineW))
+	return lipglossv2.JoinHorizontal(lipglossv2.Center, line, info)
+}
+
+// applyGutter sets the viewport's left gutter to show line numbers.
+// Called on first render and whenever the theme changes.
+func (s *DetailScreen) applyGutter() {
+	gutterStyle := s.theme.Subtle
+	s.vp.LeftGutterFunc = func(info viewport.GutterContext) string {
+		switch {
+		case info.Soft:
+			return gutterStyle.Render("     │ ")
+		case info.Index >= info.TotalLines:
+			return gutterStyle.Render("   ~ │ ")
+		default:
+			return gutterStyle.Render(fmt.Sprintf("%4d │ ", info.Index+1))
+		}
+	}
+}
+
+// contentWidth returns the usable width inside the App frame.
+func (s *DetailScreen) contentWidth() int {
+	frameH, _ := s.theme.App.GetFrameSize()
+	return s.width - frameH
+}
+
 // updateViewportSize recalculates viewport dimensions from the window size,
-// theme frame, header height, and actual rendered help bar height.
+// theme frame, header height, and footer height.
 func (s *DetailScreen) updateViewportSize() {
 	if s.width == 0 || s.height == 0 {
 		return
 	}
+	_, frameV := s.theme.App.GetFrameSize()
+	s.help.SetWidth(s.contentWidth())
 	headerH := lipglossv2.Height(s.headerView())
-	frameH, frameV := s.theme.App.GetFrameSize()
-	contentW := s.width - frameH
-	s.help.SetWidth(contentW)
-	helpH := lipglossv2.Height(s.help.View(s.keys))
-	s.vp.SetWidth(contentW)
-	s.vp.SetHeight(s.height - frameV - headerH - helpH)
-}
+	footerH := lipglossv2.Height(s.footerView())
 
-// headerView renders the title bar at the top of the detail screen.
-func (s *DetailScreen) headerView() string {
-	return s.theme.Title.Render(s.title)
+	// Help sits below the footer (outside the pager block) so is not subtracted here.
+	vpH := s.height - frameV - headerH - footerH
+	if cap := s.height / 3; vpH > cap {
+		vpH = cap
+	}
+	s.vp.SetWidth(s.contentWidth())
+	s.vp.SetHeight(vpH)
 }
