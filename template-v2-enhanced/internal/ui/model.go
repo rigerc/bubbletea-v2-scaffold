@@ -5,7 +5,6 @@ package ui
 import (
 	"fmt"
 
-	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
 
 	"template-v2-enhanced/config"
@@ -125,17 +124,31 @@ Logging uses zerolog with a file sink so it doesn't interfere with the TUI.
 
 Press ESC to return to the menu.`
 
-	// Create menu items.
-	items := []list.Item{
-		screens.NewMenuItem("Details", "View a detail screen",
-			nav.Push(screens.NewDetailScreen("Details", detailContent, false, cfg.App.Name))),
-		screens.NewMenuItem("Browse Files", "Browse the filesystem",
-			nav.Push(screens.NewFilePickerScreen(".", false, cfg.App.Name))),
-		screens.NewMenuItem("About", "About this application",
-			nav.Push(screens.NewDetailScreen("About", aboutContent, false, cfg.App.Name))),
+	// Create menu items using Huh-based menu.
+	menuOptions := []screens.HuhMenuOption{
+		{
+			Title:       "Details",
+			Description: "View a detail screen",
+			Action:      nav.Push(screens.NewDetailScreen("Details", detailContent, false, cfg.App.Name)),
+		},
+		{
+			Title:       "Browse Files",
+			Description: "Browse the filesystem",
+			Action:      nav.Push(screens.NewHuhFilePickerScreen(".", false, cfg.App.Name)),
+		},
+		{
+			Title:       "Settings",
+			Description: "Configure application",
+			Action:      nav.Push(screens.NewSettingsScreen(false, cfg.App.Name)),
+		},
+		{
+			Title:       "About",
+			Description: "About this application",
+			Action:      nav.Push(screens.NewDetailScreen("About", aboutContent, false, cfg.App.Name)),
+		},
 	}
 
-	root := screens.NewMenuScreen(items, false, cfg.App.Name)
+	root := screens.NewHuhMenuScreen(menuOptions, false, cfg.App.Name)
 
 	return Model{
 		screens:      []nav.Screen{root},
@@ -200,6 +213,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case nav.PopMsg:
 		if len(m.screens) > 1 {
 			m.screens = m.screens[:len(m.screens)-1]
+			// Refresh the newly-exposed screen with current window size
+			top := m.screens[len(m.screens)-1]
+			updated, cmd := top.Update(tea.WindowSizeMsg{Width: m.width, Height: m.height})
+			m.screens[len(m.screens)-1] = updated
+			return m, cmd
 		}
 		return m, nil
 
@@ -217,6 +235,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.screens[len(m.screens)-1] = s
 		}
 		return m, tea.Batch(cmds...)
+
+	case screens.SettingsAppliedMsg:
+		// Settings were applied - log them and optionally update app config
+		applogger.Debug().Msgf("Settings applied: %+v", msg.Data)
+		// Pop the settings screen after successful submission
+		if len(m.screens) > 1 {
+			m.screens = m.screens[:len(m.screens)-1]
+		}
+		return m, nil
 	}
 
 	// Delegate to active screen

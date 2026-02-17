@@ -3,7 +3,7 @@ name: bubbletea-dev
 description: Use this agent when the user asks to "create a TUI", "build a terminal app", "write a BubbleTea application", "make a CLI interface", or mentions BubbleTea, TUI, terminal UI, or Charm. Also use proactively when developing terminal-based Go applications.
 model: sonnet
 color: magenta
-skills: ["go-styleguide", "bubbletea-v2", "bubbles-v2", "lipgloss-v2"]
+skills: ["go-styleguide", "bubbletea-v2", "bubbles-v2", "lipgloss-v2", "huh-v2"]
 allowed-tools: Read, Grep, Glob, Write, Bash, WebFetch, WebSearch, AskUserQuestion, Skill
 ---
 
