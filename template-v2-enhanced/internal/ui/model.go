@@ -142,6 +142,11 @@ Press ESC to return to the menu.`
 			Action:      nav.Push(screens.NewSettingsScreen(false, cfg.App.Name)),
 		},
 		{
+			Title:       "Banner Demo",
+			Description: "Showcase ASCII fonts and gradients",
+			Action:      nav.Push(screens.NewBannerDemoScreen(false, cfg.App.Name)),
+		},
+		{
 			Title:       "About",
 			Description: "About this application",
 			Action:      nav.Push(screens.NewDetailScreen("About", aboutContent, false, cfg.App.Name)),

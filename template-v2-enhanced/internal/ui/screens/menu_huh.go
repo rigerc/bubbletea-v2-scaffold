@@ -2,9 +2,11 @@
 package screens
 
 import (
+	lipgloss "charm.land/lipgloss/v2"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/huh/v2"
 
+	"template-v2-enhanced/internal/ui/banner"
 	"template-v2-enhanced/internal/ui/nav"
 )
 
@@ -21,6 +23,10 @@ type HuhMenuScreen struct {
 	*FormScreen
 	options     []HuhMenuOption
 	selectedIdx *int // Pointer to the form's bound value
+
+	bannerCfg   banner.BannerConfig // fixed for the lifetime of this screen
+	bannerCache string              // last rendered banner; re-rendered on width change
+	bannerWidth int
 }
 
 // NewHuhMenuScreen creates a menu using Huh's Select field.
@@ -71,7 +77,47 @@ func NewHuhMenuScreen(options []HuhMenuOption, isDark bool, appName string) *Huh
 		FormScreen:  fs,
 		options:     menuOpts,
 		selectedIdx: selectedIdx,
+		bannerCfg: banner.BannerConfig{
+			Text:  appName,
+			Font:  "smslant",
+			Width: 90,
+		},
 	}
+}
+
+// View renders the menu with a figlet ASCII banner above the form.
+// On terminals shorter than 20 rows it falls back to the plain text header.
+// The banner is cached and only re-rendered when the content width changes.
+func (s *HuhMenuScreen) View() string {
+	contentWidth := s.ContentWidth()
+
+	if s.Height <= 20 {
+		s.bannerCache = s.HeaderView()
+		s.bannerWidth = contentWidth
+	} else if s.bannerCache == "" || s.bannerWidth != contentWidth {
+		rendered, err := banner.RenderBanner(s.bannerCfg, contentWidth)
+		if err != nil {
+			rendered = s.HeaderView()
+		}
+		s.bannerCache = rendered
+		s.bannerWidth = contentWidth
+	}
+
+	bannerH := lipgloss.Height(s.bannerCache)
+	formInternalHelpH := 4
+	maxFormH := s.CalculateContentHeight(bannerH, formInternalHelpH)
+
+	formView := lipgloss.NewStyle().
+		Height(maxFormH).
+		MaxHeight(maxFormH).
+		Render(s.FormScreen.form.View())
+
+	return s.Theme.App.Render(
+		lipgloss.JoinVertical(lipgloss.Left,
+			s.bannerCache,
+			formView,
+		),
+	)
 }
 
 // Update handles incoming messages and returns an updated screen and command.

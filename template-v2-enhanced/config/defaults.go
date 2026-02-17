@@ -14,7 +14,7 @@ func DefaultConfig() *Config {
 			ThemeName:     "default",
 		},
 		App: AppConfig{
-			Name:    "template-v2-enhanced",
+			Name:    "template",
 			Version: "1.0.0",
 			Title:   "Template V2 Enhanced",
 		},
