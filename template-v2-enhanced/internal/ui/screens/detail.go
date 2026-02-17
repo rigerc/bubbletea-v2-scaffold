@@ -120,7 +120,7 @@ func (s *DetailScreen) footerView() string {
 	b.Left = "┤"
 	info := lipgloss.NewStyle().
 		BorderStyle(b).
-		BorderForeground(lipgloss.Color("#25A065")).
+		BorderForeground(s.Theme.Palette.Primary).
 		Padding(0, 1).
 		Render(fmt.Sprintf("%3.f%%", s.vp.ScrollPercent()*100))
 

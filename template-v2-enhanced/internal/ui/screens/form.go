@@ -9,6 +9,7 @@ import (
 
 	huhadapter "template-v2-enhanced/internal/ui/huh"
 	"template-v2-enhanced/internal/ui/nav"
+	"template-v2-enhanced/internal/ui/theme"
 )
 
 // FormScreen wraps a huh.Form to implement nav.Screen.
@@ -45,7 +46,7 @@ func NewFormScreen(
 	}
 
 	// Apply theme and keymap
-	form.WithTheme(huhadapter.ThemeFunc(fs.Theme))
+	form.WithTheme(theme.HuhThemeFunc())
 	form.WithKeyMap(huhadapter.KeyMap(fs.Keys))
 
 	return fs
@@ -76,7 +77,7 @@ func newFormScreenWithBuilder(
 	}
 
 	// Apply theme and keymap
-	form.WithTheme(huhadapter.ThemeFunc(fs.Theme))
+	form.WithTheme(theme.HuhThemeFunc())
 	form.WithKeyMap(huhadapter.KeyMap(fs.Keys))
 
 	return fs
@@ -174,7 +175,7 @@ func (s *FormScreen) View() string {
 // Implements nav.Themeable.
 func (s *FormScreen) SetTheme(isDark bool) {
 	s.ApplyTheme(isDark)
-	s.form.WithTheme(huhadapter.ThemeFunc(s.Theme))
+	s.form.WithTheme(theme.HuhThemeFunc())
 }
 
 // resetFormCmd returns a command that resets the form to its initial state.
@@ -193,7 +194,7 @@ func (s *FormScreen) handleResetMsg() (nav.Screen, tea.Cmd) {
 	if s.formBuilder != nil {
 		// Rebuild the form entirely
 		s.form = s.formBuilder()
-		s.form.WithTheme(huhadapter.ThemeFunc(s.Theme))
+		s.form.WithTheme(theme.HuhThemeFunc())
 		s.form.WithKeyMap(huhadapter.KeyMap(s.Keys))
 	}
 	// Re-initialize the form

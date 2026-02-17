@@ -7,7 +7,7 @@ import (
 	lipgloss "charm.land/lipgloss/v2"
 
 	appkeys "template-v2-enhanced/internal/ui/keys"
-	"template-v2-enhanced/internal/ui/styles"
+	"template-v2-enhanced/internal/ui/theme"
 )
 
 // Sizing constants for consistent view dimensions across all screens.
@@ -26,7 +26,7 @@ const (
 // Embed it in your Screen struct and call its helpers to avoid repeating
 // layout and theming boilerplate.
 type ScreenBase struct {
-	Theme   styles.Theme
+	Theme   theme.Theme
 	IsDark  bool
 	Width   int
 	Height  int
@@ -46,7 +46,7 @@ func NewBase(isDark bool, appName string) ScreenBase {
 // Call at the start of SetTheme() before any component-specific updates.
 func (b *ScreenBase) ApplyTheme(isDark bool) {
 	b.IsDark = isDark
-	b.Theme = styles.New(isDark)
+	b.Theme = theme.New(isDark)
 	b.Help.Styles = help.DefaultStyles(isDark)
 }
 
