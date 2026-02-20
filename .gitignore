@@ -3,3 +3,12 @@
 .vscode/
 *.swp
 docs/
+.agents/local.json
+.agents/generated/
+.codex/
+.gemini/
+.vscode/mcp.json
+.claude/skills
+.cursor/
+.antigravity/
+projector/
