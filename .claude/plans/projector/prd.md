@@ -10,7 +10,7 @@ Status: Draft
 
 ## 1. Overview
 
-Projector is a terminal user interface (TUI) application for developers to manage and monitor multiple Git-based projects from a single dashboard. Built on the BubbleTea v2 scaffold, it scans a configured directory for Git repositories and provides real-time status, metadata, and quick access to external tools.
+Projector is a terminal user interface (TUI) application for developers to manage and monitor multiple Git-based projects from a single dashboard. Built on the BubbleTea v2 scaffold, it scans a configured directory for Git repositories and provides real-time status, metadata, and quick access to external tools. A scaffold is setup in ./projector/
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -423,4 +423,3 @@ json
     }
   }
 }
-

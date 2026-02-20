@@ -7,17 +7,14 @@ import (
 )
 
 var (
-	// cfgFile holds the path to the configuration file.
 	cfgFile string
 
-	// debugMode indicates if debug mode is enabled.
 	debugMode bool
 
-	// logLevel sets the logging verbosity.
 	logLevel string
 
-	// runUI indicates whether to run the TUI after command execution.
-	// This is set to false when running subcommands like version or completion.
+	projectsDir string
+
 	runUI = true
 )
 
@@ -83,17 +80,17 @@ func ShouldRunUI() bool {
 
 // init initializes the root command with flags and configuration.
 func init() {
-	// Config file flag
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "",
 		"Path to configuration file (default: $HOME/.projector.json)")
 
-	// Debug mode flag
 	rootCmd.PersistentFlags().BoolVar(&debugMode, "debug", false,
 		"Enable debug mode with trace logging")
 
-	// Log level flag
 	rootCmd.PersistentFlags().StringVar(&logLevel, "log-level", "info",
 		"Set logging level (trace, debug, info, warn, error, fatal)")
+
+	rootCmd.PersistentFlags().StringVar(&projectsDir, "projects-dir", "",
+		"Directory to scan for projects (default: ~/projects)")
 }
 
 // GetConfigFile returns the path to the configuration file.
@@ -110,4 +107,12 @@ func GetLogLevel() string {
 // Use this to distinguish an explicit flag from Cobra's default value.
 func WasLogLevelSet() bool {
 	return rootCmd.PersistentFlags().Changed("log-level")
+}
+
+func GetProjectsDir() string {
+	return projectsDir
+}
+
+func WasProjectsDirSet() bool {
+	return rootCmd.PersistentFlags().Changed("projects-dir")
 }

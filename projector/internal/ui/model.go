@@ -4,11 +4,16 @@ package ui
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 
 	"projector/config"
 	applogger "projector/internal/logger"
+	"projector/internal/projector"
 	"projector/internal/ui/nav"
 	"projector/internal/ui/screens"
 )
@@ -36,124 +41,29 @@ type Model struct {
 // New creates a new Model with the provided configuration.
 // It accepts config.Config as a value type (main.go passes *cfg dereferenced).
 func New(cfg config.Config) Model {
-	// Define sample content for detail screens.
-	detailContent := `This is a detail screen with scrollable content.
-
-Scroll controls:
-  • j / ↓        — line down
-  • k / ↑        — line up
-  • d / page down — half page down
-  • u / page up   — half page up
-  • g / home      — top
-  • G / end       — bottom
-  • mouse wheel   — scroll
-
-Press ESC to return to the menu.
-
-─────────────────────────────────────
-
-Section 1 — Lorem Ipsum
-
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod
-tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam,
-quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo.
-
-Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore
-eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident.
-
-─────────────────────────────────────
-
-Section 2 — More Filler
-
-Sunt in culpa qui officia deserunt mollit anim id est laborum. Curabitur
-pretium tincidunt lacus. Nulla gravida orci a odio. Nullam varius, turpis
-molestie pretium placerat, arcu ante tincidunt purus, vel bibendum nisi.
-
-Pellentesque habitant morbi tristique senectus et netus et malesuada fames
-ac turpis egestas. Vestibulum tortor quam, feugiat vitae, ultricies eget,
-tempor sit amet, ante. Donec eu libero sit amet quam egestas semper.
-
-─────────────────────────────────────
-
-Section 3 — Even More
-
-Aenean ultricies mi vitae est. Mauris placerat eleifend leo. Quisque sit
-amet est et sapien ullamcorper pharetra. Vestibulum erat wisi, condimentum
-sed, commodo vitae, ornare sit amet, wisi. Aenean fermentum, elit eget
-tincidunt condimentum, eros ipsum rutrum orci.
-
-Nullam venenatis felis eu purus vestibulum, nec malesuada nisl iaculis.
-Fusce aliquet purus vel mauris pharetra, a condimentum lectus tincidunt.
-
-─────────────────────────────────────
-
-End of content.`
-
-	aboutContent := `scaffold
-
-A BubbleTea v2 skeleton application with:
-  • Stack-based navigation
-  • Adaptive light/dark theming
-  • List-based menu navigation
-  • Scrollable detail screens with capped height
-
-Built with:
-  • charm.land/bubbletea/v2
-  • charm.land/bubbles/v2
-  • charm.land/lipgloss/v2
-  • github.com/spf13/cobra
-  • github.com/knadh/koanf/v2
-  • github.com/rs/zerolog
-
-─────────────────────────────────────
-
-Architecture
-
-The application uses a stack-based navigator (internal/ui/nav). Each screen
-implements the nav.Screen interface (Init / Update / View). The root model
-holds the stack and fans messages out to the active screen.
-
-Theme detection uses tea.RequestBackgroundColor, which fires a
-tea.BackgroundColorMsg carrying the terminal's actual background colour.
-Screens implement nav.Themeable to receive isDark updates.
-
-Config is loaded via koanf: defaults → config file → env vars → flags.
-Logging uses zerolog with a file sink so it doesn't interfere with the TUI.
-
-─────────────────────────────────────
-
-Press ESC to return to the menu.`
-
-	// Create menu items using Huh-based menu.
-	menuOptions := []screens.HuhMenuOption{
-		{
-			Title:       "Details",
-			Description: "View a detail screen",
-			Action:      nav.Push(screens.NewDetailScreen("Details", detailContent, false, cfg.App.Name)),
-		},
-		{
-			Title:       "Browse Files",
-			Description: "Browse the filesystem",
-			Action:      nav.Push(screens.NewHuhFilePickerScreen(".", false, cfg.App.Name)),
-		},
-		{
-			Title:       "Settings",
-			Description: "Configure application",
-			Action:      nav.Push(screens.NewSettingsScreen(false, cfg.App.Name)),
-		},
-		{
-			Title:       "Banner Demo",
-			Description: "Showcase ASCII fonts and gradients",
-			Action:      nav.Push(screens.NewBannerDemoScreen(false, cfg.App.Name)),
-		},
-		{
-			Title:       "About",
-			Description: "About this application",
-			Action:      nav.Push(screens.NewDetailScreen("About", aboutContent, false, cfg.App.Name)),
-		},
+	projectsDir := cfg.Projector.ProjectsDir
+	if projectsDir == "" {
+		home, _ := os.UserHomeDir()
+		projectsDir = filepath.Join(home, "projects")
+	}
+	if strings.HasPrefix(projectsDir, "~") {
+		home, _ := os.UserHomeDir()
+		projectsDir = filepath.Join(home, projectsDir[1:])
 	}
 
-	root := screens.NewHuhMenuScreen(menuOptions, false, cfg.App.Name)
+	gitTimeout := time.Duration(cfg.Projector.Scan.GitTimeout) * time.Second
+	if gitTimeout <= 0 {
+		gitTimeout = 5 * time.Second
+	}
+
+	root := screens.NewProjectsListScreen(projectsDir, false, cfg.App.Name)
+	scanner := projector.NewScanner(
+		projectsDir,
+		cfg.Projector.Scan.Concurrency,
+		gitTimeout,
+		*applogger.Global(),
+	)
+	root.SetScanner(scanner)
 
 	return Model{
 		screens:      []nav.Screen{root},
@@ -274,9 +184,9 @@ func (m Model) View() tea.View {
 	}
 
 	v := tea.NewView(content)
-	v.AltScreen = m.altScreen   // from cfg.UI.AltScreen
+	v.AltScreen = m.altScreen     // from cfg.UI.AltScreen
 	v.WindowTitle = m.windowTitle // from cfg.App.Title
-	if m.mouseEnabled {          // from cfg.UI.MouseEnabled
+	if m.mouseEnabled {           // from cfg.UI.MouseEnabled
 		v.MouseMode = tea.MouseModeCellMotion
 	}
 	return v

@@ -93,15 +93,16 @@ func loadConfig() *config.Config {
 		if err == nil {
 			cfg = fileCfg
 		}
-		// ErrConfigNotFound or parse error → silently fall back to defaults
 	}
 
-	// CLI flags override file/defaults only when explicitly passed.
 	if cmd.IsDebugMode() {
 		cfg.Debug = true
 	}
 	if cmd.WasLogLevelSet() {
 		cfg.LogLevel = cmd.GetLogLevel()
+	}
+	if cmd.WasProjectsDirSet() {
+		cfg.Projector.ProjectsDir = cmd.GetProjectsDir()
 	}
 
 	return cfg

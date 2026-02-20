@@ -9,14 +9,26 @@ func DefaultConfig() *Config {
 		LogLevel: "info",
 		Debug:    false,
 		UI: UIConfig{
-			AltScreen:     false,
-			MouseEnabled:  true,
-			ThemeName:     "default",
+			AltScreen:    false,
+			MouseEnabled: true,
+			ThemeName:    "default",
 		},
 		App: AppConfig{
 			Name:    "projector",
 			Version: "1.0.0",
 			Title:   "projector",
+		},
+		Projector: ProjectorConfig{
+			ProjectsDir: "~/projects",
+			Commands: CommandsConfig{
+				Editor:   "$EDITOR",
+				Terminal: "$SHELL",
+			},
+			Scan: ScanConfig{
+				AutoRefreshOnFocus: true,
+				Concurrency:        10,
+				GitTimeout:         5,
+			},
 		},
 	}
 }

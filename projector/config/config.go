@@ -25,19 +25,15 @@ var (
 // Config holds the application configuration.
 // All fields are exported to support JSON marshaling and environment variable binding.
 type Config struct {
-	// LogLevel specifies the logging verbosity level.
-	// Valid values: trace, debug, info, warn, error, fatal
 	LogLevel string `json:"logLevel" mapstructure:"logLevel" koanf:"logLevel"`
 
-	// Debug enables debug mode which sets log level to trace
-	// and enables additional debugging features.
 	Debug bool `json:"debug" mapstructure:"debug" koanf:"debug"`
 
-	// UI contains user interface specific configuration.
 	UI UIConfig `json:"ui" mapstructure:"ui" koanf:"ui"`
 
-	// App contains general application configuration.
 	App AppConfig `json:"app" mapstructure:"app" koanf:"app"`
+
+	Projector ProjectorConfig `json:"projector" mapstructure:"projector" koanf:"projector"`
 }
 
 // UIConfig contains configuration specific to the user interface.
@@ -54,14 +50,28 @@ type UIConfig struct {
 
 // AppConfig contains general application configuration.
 type AppConfig struct {
-	// Name is the application name.
 	Name string `json:"name" mapstructure:"name" koanf:"name"`
 
-	// Version is the application version.
 	Version string `json:"version" mapstructure:"version" koanf:"version"`
 
-	// Title is the default window title.
 	Title string `json:"title" mapstructure:"title" koanf:"title"`
+}
+
+type ProjectorConfig struct {
+	ProjectsDir string         `json:"projectsDir" mapstructure:"projectsDir" koanf:"projectsDir"`
+	Commands    CommandsConfig `json:"commands" mapstructure:"commands" koanf:"commands"`
+	Scan        ScanConfig     `json:"scan" mapstructure:"scan" koanf:"scan"`
+}
+
+type CommandsConfig struct {
+	Editor   string `json:"editor" mapstructure:"editor" koanf:"editor"`
+	Terminal string `json:"terminal" mapstructure:"terminal" koanf:"terminal"`
+}
+
+type ScanConfig struct {
+	AutoRefreshOnFocus bool `json:"autoRefreshOnFocus" mapstructure:"autoRefreshOnFocus" koanf:"autoRefreshOnFocus"`
+	Concurrency        int  `json:"concurrency" mapstructure:"concurrency" koanf:"concurrency"`
+	GitTimeout         int  `json:"gitTimeout" mapstructure:"gitTimeout" koanf:"gitTimeout"`
 }
 
 // Load reads configuration from the specified file path.
