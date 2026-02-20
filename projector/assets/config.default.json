@@ -1,0 +1,14 @@
+{
+  "logLevel": "info",
+  "debug": false,
+  "ui": {
+    "altScreen": false,
+    "mouseEnabled": true,
+    "themeName": "default"
+  },
+  "app": {
+    "name": "projector",
+    "version": "1.0.0",
+    "title": "Template V2 Enhanced"
+  }
+}

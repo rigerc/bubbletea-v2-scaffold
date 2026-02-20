@@ -1,0 +1,15 @@
+{
+  "id": "5ef3a306-aeae-43b4-a954-c86cda335c08",
+  "status": "interrupted",
+  "startedAt": "2026-02-20T18:11:50.275Z",
+  "updatedAt": "2026-02-20T18:14:42.522Z",
+  "agentPlugin": "kiro",
+  "trackerPlugin": "json",
+  "prdPath": "./tasks/prd.json",
+  "currentIteration": 0,
+  "maxIterations": 5,
+  "totalTasks": 0,
+  "tasksCompleted": 0,
+  "cwd": "/mnt/d/dev/projects/bubbletea-v2-scaffold/projector",
+  "endedAt": "2026-02-20T18:14:42.521Z"
+}
