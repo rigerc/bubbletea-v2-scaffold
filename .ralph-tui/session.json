@@ -1,70 +1,31 @@
 {
   "version": 1,
-  "sessionId": "5421c325-17f1-4351-a772-e51d6e40e02c",
-  "status": "failed",
-  "startedAt": "2026-02-20T22:08:17.251Z",
-  "updatedAt": "2026-02-20T22:16:01.140Z",
-  "currentIteration": 0,
+  "sessionId": "87019ad1-5c03-4cc5-a087-8a5ffc1599f5",
+  "status": "running",
+  "startedAt": "2026-02-20T22:20:09.907Z",
+  "updatedAt": "2026-02-20T22:21:58.141Z",
+  "currentIteration": 1,
   "maxIterations": 3,
   "tasksCompleted": 0,
   "isPaused": false,
   "agentPlugin": "opencode",
   "trackerState": {
     "plugin": "json",
-    "prdPath": "./tasks/prd.json",
-    "totalTasks": 8,
-    "tasks": [
-      {
-        "id": "US-008",
-        "title": "Monorepo-Aware Scanning",
-        "status": "open",
-        "completedInSession": false
-      },
-      {
-        "id": "US-004",
-        "title": "Configure Projects Directory",
-        "status": "open",
-        "completedInSession": false
-      },
-      {
-        "id": "US-001",
-        "title": "View Project List",
-        "status": "open",
-        "completedInSession": false
-      },
-      {
-        "id": "US-005",
-        "title": "Filter Projects with Fuzzy Search",
-        "status": "open",
-        "completedInSession": false
-      },
-      {
-        "id": "US-006",
-        "title": "Handle Git Status Errors Gracefully",
-        "status": "open",
-        "completedInSession": false
-      },
-      {
-        "id": "US-002",
-        "title": "Open Project in Terminal",
-        "status": "open",
-        "completedInSession": false
-      },
-      {
-        "id": "US-003",
-        "title": "Open Project in Editor",
-        "status": "open",
-        "completedInSession": false
-      },
-      {
-        "id": "US-007",
-        "title": "Remember Last Selection",
-        "status": "open",
-        "completedInSession": false
-      }
-    ]
+    "totalTasks": 0,
+    "tasks": []
   },
-  "iterations": [],
+  "iterations": [
+    {
+      "iteration": 1,
+      "status": "interrupted",
+      "taskId": "US-008",
+      "taskTitle": "Monorepo-Aware Scanning",
+      "taskCompleted": false,
+      "durationMs": 68814,
+      "startedAt": "2026-02-20T22:20:49.149Z",
+      "endedAt": "2026-02-20T22:21:57.963Z"
+    }
+  ],
   "skippedTaskIds": [],
   "cwd": "/mnt/d/dev/projects/bubbletea-v2-scaffold",
   "activeTaskIds": [],

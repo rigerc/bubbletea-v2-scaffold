@@ -1,14 +1,14 @@
 {
-  "id": "5421c325-17f1-4351-a772-e51d6e40e02c",
-  "status": "running",
-  "startedAt": "2026-02-20T22:08:15.852Z",
-  "updatedAt": "2026-02-20T22:08:15.854Z",
+  "id": "87019ad1-5c03-4cc5-a087-8a5ffc1599f5",
+  "status": "interrupted",
+  "startedAt": "2026-02-20T22:20:08.186Z",
+  "updatedAt": "2026-02-20T22:21:58.196Z",
   "agentPlugin": "opencode",
   "trackerPlugin": "json",
-  "prdPath": "./tasks/prd.json",
-  "currentIteration": 0,
+  "currentIteration": 1,
   "maxIterations": 3,
   "totalTasks": 0,
   "tasksCompleted": 0,
-  "cwd": "/mnt/d/dev/projects/bubbletea-v2-scaffold"
+  "cwd": "/mnt/d/dev/projects/bubbletea-v2-scaffold",
+  "endedAt": "2026-02-20T22:21:58.190Z"
 }
