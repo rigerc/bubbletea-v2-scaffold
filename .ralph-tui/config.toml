@@ -1,9 +1,0 @@
-configVersion = "2.1"
-maxIterations = 3
-agent = "opencode"
-tracker = "json"
-autoCommit = false
-subagentTracingDetail = "full"
-
-[agentOptions]
-[trackerOptions]
