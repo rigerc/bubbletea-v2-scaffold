@@ -2,11 +2,11 @@
   {
     "id": "1",
     "title": "Write hello.txt",
-    "description": "Contents: One sentence of whatever you want",
+    "description": "Create a hello.txt file with one sentence of content.",
     "priority": 1,
     "status": "completed",
     "retryCount": 0,
-    "maxRetries": 0,
+    "maxRetries": 3,
     "validationCommand": ""
   }
 ]
