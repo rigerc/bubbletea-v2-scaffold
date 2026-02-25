@@ -1,14 +1,17 @@
 // Package ui provides the BubbleTea UI model for the application.
-// It implements a stack-based navigation router with theme support.
+// It implements a stack-based navigation router with a persistent banner and
+// theme support.
 package ui
 
 import (
 	"fmt"
 
 	tea "charm.land/bubbletea/v2"
+	lipgloss "charm.land/lipgloss/v2"
 
 	"scaffold/config"
 	applogger "scaffold/internal/logger"
+	"scaffold/internal/ui/banner"
 	"scaffold/internal/ui/nav"
 	"scaffold/internal/ui/screens"
 	"scaffold/internal/ui/theme"
@@ -24,9 +27,22 @@ type Model struct {
 	screens []nav.Screen
 
 	// width and height store the *inner* content dimensions (terminal size minus
-	// borderOverhead on each axis) so every screen sizes itself to fit inside the
-	// persistent outer border rendered by View.
+	// borderOverhead on each axis), so every screen sizes itself to fit inside
+	// the persistent outer border rendered by View.
 	width, height int
+
+	// bannerStr is the cached rendered ASCII art banner.
+	// It is re-rendered whenever the terminal width changes.
+	bannerStr string
+
+	// bannerHeight is the row count of bannerStr. It is subtracted from the
+	// height delivered to child screens via WindowSizeMsg so they know exactly
+	// how much vertical space is available below the banner.
+	bannerHeight int
+
+	// bannerWidth tracks the content width at which bannerStr was last rendered
+	// so we can invalidate the cache on resize.
+	bannerWidth int
 
 	// isDark indicates if the terminal has a dark background.
 	isDark bool
@@ -37,6 +53,9 @@ type Model struct {
 	// quitting is set to true when the app is about to exit.
 	quitting bool
 
+	// appName is the short application name rendered in the persistent banner.
+	appName string
+
 	// Config-derived fields (extracted from config.Config at construction).
 	altScreen    bool
 	mouseEnabled bool
@@ -46,19 +65,41 @@ type Model struct {
 // New creates a new Model with the provided configuration.
 // It accepts config.Config as a value type (main.go passes *cfg dereferenced).
 func New(cfg config.Config) Model {
-	root := screens.NewHuhMenuScreen(
-		buildMenuOptions(cfg.App.Name),
-		false, // isDark — refined once BackgroundColorMsg arrives
-		cfg.App.Name,
-	)
-
 	return Model{
-		screens:      []nav.Screen{root},
+		screens:      []nav.Screen{screens.NewHomeScreen(cfg.App.Name, false)},
 		th:           theme.New(false),
+		appName:      cfg.App.Name,
 		altScreen:    cfg.UI.AltScreen,
 		mouseEnabled: cfg.UI.MouseEnabled,
 		windowTitle:  cfg.App.Title,
 	}
+}
+
+// renderBanner renders the persistent ASCII art banner at the model's current
+// content width. It returns the rendered string and its height in rows.
+// If the width is not yet known (≤ 0), it returns empty values.
+func (m Model) renderBanner() (string, int) {
+	if m.width <= 0 {
+		return "", 0
+	}
+	cfg := banner.BannerConfig{
+		Text:          m.appName,
+		Font:          "smslant",
+		Width:         m.width,
+		Justification: 1, // centered
+	}
+	s, err := banner.RenderBanner(cfg, m.width)
+	if err != nil {
+		// Graceful fallback: plain text line.
+		s = m.appName + "\n"
+	}
+	return s, lipgloss.Height(s)
+}
+
+// screenHeight returns the content height available to the active screen after
+// reserving space for the persistent banner.
+func (m Model) screenHeight() int {
+	return max(0, m.height-m.bannerHeight)
 }
 
 // Init returns the initial command. It requests the terminal background color
@@ -76,14 +117,32 @@ func (m Model) Init() tea.Cmd {
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
-	// Shrink WindowSizeMsg by the border overhead so all screens (and the
-	// values stored in m.width / m.height) refer to the inner content area.
+	// Shrink WindowSizeMsg by the border overhead so all screens and the stored
+	// m.width / m.height refer to the inner content area (inside the border).
+	// We also re-render and cache the banner here so screenHeight() is accurate
+	// for the downstream message that screens receive.
 	if wm, ok := msg.(tea.WindowSizeMsg); ok {
-		inner := tea.WindowSizeMsg{
-			Width:  max(0, wm.Width-borderOverhead),
-			Height: max(0, wm.Height-borderOverhead),
+		m.width = max(0, wm.Width-borderOverhead)
+		m.height = max(0, wm.Height-borderOverhead)
+
+		// Re-render banner only when the width actually changed.
+		if m.width != m.bannerWidth {
+			m.bannerStr, m.bannerHeight = m.renderBanner()
+			m.bannerWidth = m.width
 		}
-		msg = inner
+
+		applogger.Debug().Msgf(
+			"Window resized: terminal=%dx%d inner=%dx%d banner=%d rows screen=%dx%d",
+			wm.Width, wm.Height,
+			m.width, m.height,
+			m.bannerHeight,
+			m.width, m.screenHeight(),
+		)
+
+		// Replace the message with the screen-adjusted dimensions so that
+		// every downstream handler (switch cases and active-screen delegation)
+		// receives the correct available area.
+		msg = tea.WindowSizeMsg{Width: m.width, Height: m.screenHeight()}
 	}
 
 	switch msg := msg.(type) {
@@ -95,21 +154,22 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case tea.WindowSizeMsg:
-		m.width, m.height = msg.Width, msg.Height
-		applogger.Debug().Msgf("Window resized: %dx%d", m.width, m.height)
-		// fall through to delegate to active screen
+		// m.width and m.height are already updated in the block above.
+		// This case is kept so the message falls through to the active-screen
+		// delegation at the bottom of the function.
+		_ = msg
 
 	case tea.BackgroundColorMsg:
 		m.isDark = msg.IsDark()
 		m.th = theme.New(m.isDark)
 		applogger.Debug().Msgf("Background color detected: isDark=%v", m.isDark)
-		// Propagate theme to ALL screens in stack
+		// Propagate theme to ALL screens in the stack.
 		for i := range m.screens {
 			if t, ok := m.screens[i].(nav.Themeable); ok {
 				t.SetTheme(m.isDark)
 			}
 		}
-		// fall through to deliver msg to active screen
+		// fall through to deliver msg to the active screen
 
 	case nav.PushMsg:
 		s := msg.Screen
@@ -119,7 +179,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if t, ok := s.(nav.Themeable); ok {
 			t.SetTheme(m.isDark)
 		}
-		s, cmd := s.Update(tea.WindowSizeMsg{Width: m.width, Height: m.height})
+		s, cmd := s.Update(tea.WindowSizeMsg{Width: m.width, Height: m.screenHeight()})
 		cmds = append(cmds, cmd)
 		m.screens = append(m.screens, s)
 		return m, tea.Batch(cmds...)
@@ -127,9 +187,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case nav.PopMsg:
 		if len(m.screens) > 1 {
 			m.screens = m.screens[:len(m.screens)-1]
-			// Refresh the newly-exposed screen with current window size
+			// Refresh the newly-exposed screen with the current window size.
 			top := m.screens[len(m.screens)-1]
-			updated, cmd := top.Update(tea.WindowSizeMsg{Width: m.width, Height: m.height})
+			updated, cmd := top.Update(tea.WindowSizeMsg{Width: m.width, Height: m.screenHeight()})
 			m.screens[len(m.screens)-1] = updated
 			return m, cmd
 		}
@@ -144,7 +204,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if t, ok := s.(nav.Themeable); ok {
 				t.SetTheme(m.isDark)
 			}
-			s, cmd := s.Update(tea.WindowSizeMsg{Width: m.width, Height: m.height})
+			s, cmd := s.Update(tea.WindowSizeMsg{Width: m.width, Height: m.screenHeight()})
 			cmds = append(cmds, cmd)
 			m.screens[len(m.screens)-1] = s
 		}
@@ -152,14 +212,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case screens.SettingsAppliedMsg:
 		applogger.Debug().Msgf("Settings applied: %+v", msg.Data)
-		// Pop the settings screen after successful submission
+		// Pop the settings screen after a successful submission.
 		if len(m.screens) > 1 {
 			m.screens = m.screens[:len(m.screens)-1]
 		}
 		return m, nil
 	}
 
-	// Delegate to active screen
+	// Delegate to the active screen.
 	if len(m.screens) > 0 {
 		top := m.screens[len(m.screens)-1]
 		updated, cmd := top.Update(msg)
@@ -171,20 +231,36 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 // View renders the current model state as a tea.View.
+//
+// Layout (inside the outer rounded border):
+//
+//	┌───────────────────────────────────┐
+//	│  ███████╗  ██████╗  ██████╗ ...  │  ← persistent ASCII art banner
+//	│                                   │
+//	│  [active screen content]          │  ← screen fills the remaining rows
+//	└───────────────────────────────────┘
 func (m Model) View() tea.View {
 	if m.quitting {
 		return tea.NewView("")
 	}
 
-	var content string
+	// Render the active screen.
+	var screenContent string
 	if len(m.screens) > 0 {
-		content = m.screens[len(m.screens)-1].View()
+		screenContent = m.screens[len(m.screens)-1].View()
 	}
 
-	// Wrap every screen in a persistent rounded border whose color tracks the
-	// current theme. Width is set to the inner content width so that the border
-	// characters push the total rendered width back up to the terminal width.
-	// In alt-screen mode the border also fills the full terminal height.
+	// Stack banner above screen content. If the banner is not yet available
+	// (width unknown on the very first frame), fall back to screen-only output.
+	var content string
+	if m.bannerStr != "" {
+		content = lipgloss.JoinVertical(lipgloss.Left, m.bannerStr, screenContent)
+	} else {
+		content = screenContent
+	}
+
+	// Wrap everything in the persistent rounded border whose colour tracks the
+	// current theme. In alt-screen mode the border also fills the full height.
 	var rendered string
 	if m.width > 0 {
 		bs := m.th.AppBorder.Width(m.width)
@@ -217,139 +293,3 @@ func Run(m Model) error {
 	applogger.Info().Msg("Program exited successfully")
 	return nil
 }
-
-// ---------------------------------------------------------------------------
-// Demo content — replace with your own screens and menu entries.
-// ---------------------------------------------------------------------------
-
-// buildMenuOptions returns the root menu entries.
-// Add, remove, or reorder entries here to customise the main menu.
-func buildMenuOptions(appName string) []screens.HuhMenuOption {
-	return []screens.HuhMenuOption{
-		{
-			Title:       "Details",
-			Description: "View a scrollable detail screen",
-			Action:      nav.Push(screens.NewDetailScreen("Details", demoDetailContent, false, appName)),
-		},
-		{
-			Title:       "Browse Files",
-			Description: "Browse the filesystem",
-			Action:      nav.Push(screens.NewHuhFilePickerScreen(".", false, appName)),
-		},
-		{
-			Title:       "Settings",
-			Description: "Configure application settings",
-			Action:      nav.Push(screens.NewSettingsScreen(false, appName)),
-		},
-		{
-			Title:       "Banner Demo",
-			Description: "Showcase ASCII fonts and gradients",
-			Action:      nav.Push(screens.NewBannerDemoScreen(false, appName)),
-		},
-		{
-			Title:       "About",
-			Description: "About this application",
-			Action:      nav.Push(screens.NewDetailScreen("About", demoAboutContent, false, appName)),
-		},
-	}
-}
-
-// demoDetailContent is sample scrollable text shown in the Details screen.
-const demoDetailContent = `This is a detail screen with scrollable content.
-
-Scroll controls:
-  • j / ↓         — line down
-  • k / ↑         — line up
-  • d / page down  — half page down
-  • u / page up    — half page up
-  • g / home       — top
-  • G / end        — bottom
-  • mouse wheel    — scroll
-
-Press ESC to return to the menu.
-
-─────────────────────────────────────
-
-Section 1 — Lorem Ipsum
-
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod
-tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam,
-quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo.
-
-Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore
-eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident.
-
-─────────────────────────────────────
-
-Section 2 — More Filler
-
-Sunt in culpa qui officia deserunt mollit anim id est laborum. Curabitur
-pretium tincidunt lacus. Nulla gravida orci a odio. Nullam varius, turpis
-molestie pretium placerat, arcu ante tincidunt purus, vel bibendum nisi.
-
-Pellentesque habitant morbi tristique senectus et netus et malesuada fames
-ac turpis egestas. Vestibulum tortor quam, feugiat vitae, ultricies eget,
-tempor sit amet, ante. Donec eu libero sit amet quam egestas semper.
-
-─────────────────────────────────────
-
-Section 3 — Even More
-
-Aenean ultricies mi vitae est. Mauris placerat eleifend leo. Quisque sit
-amet est et sapien ullamcorper pharetra. Vestibulum erat wisi, condimentum
-sed, commodo vitae, ornare sit amet, wisi. Aenean fermentum, elit eget
-tincidunt condimentum, eros ipsum rutrum orci.
-
-Nullam venenatis felis eu purus vestibulum, nec malesuada nisl iaculis.
-Fusce aliquet purus vel mauris pharetra, a condimentum lectus tincidunt.
-
-─────────────────────────────────────
-
-End of content.`
-
-// demoAboutContent is sample text shown in the About screen.
-const demoAboutContent = `scaffold
-
-A BubbleTea v2 skeleton application with:
-  • Stack-based navigation
-  • Adaptive light/dark theming
-  • Huh-based menu navigation
-  • Scrollable detail screens
-
-Built with:
-  • charm.land/bubbletea/v2
-  • charm.land/bubbles/v2
-  • charm.land/lipgloss/v2
-  • charm.land/huh/v2
-  • github.com/spf13/cobra
-  • github.com/knadh/koanf/v2
-  • github.com/rs/zerolog
-
-─────────────────────────────────────
-
-Architecture
-
-The application uses a stack-based navigator (internal/ui/nav). Each screen
-implements the nav.Screen interface (Init / Update / View). The root model
-holds the stack and fans messages out to the active screen.
-
-Screens embed ScreenBase and build their views with the layout.Column builder:
-
-    func (s *MyScreen) View() string {
-        return s.Layout().
-            Header(s.HeaderView()).
-            Body(myContent).
-            Help(s.RenderHelp(s.Keys)).
-            Render()
-    }
-
-Theme detection uses tea.RequestBackgroundColor, which fires a
-tea.BackgroundColorMsg carrying the terminal's actual background colour.
-Screens implement nav.Themeable to receive isDark updates.
-
-Config is loaded via koanf: defaults → config file → env vars → flags.
-Logging uses zerolog with a file sink so it doesn't interfere with the TUI.
-
-─────────────────────────────────────
-
-Press ESC to return to the menu.`
