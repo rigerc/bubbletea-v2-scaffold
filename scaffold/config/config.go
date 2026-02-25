@@ -42,9 +42,6 @@ type Config struct {
 
 // UIConfig contains configuration specific to the user interface.
 type UIConfig struct {
-	// AltScreen runs the TUI in alternate screen mode (fullscreen).
-	AltScreen bool `json:"altScreen" mapstructure:"altScreen" koanf:"altScreen"`
-
 	// MouseEnabled enables mouse support in the TUI.
 	MouseEnabled bool `json:"mouseEnabled" mapstructure:"mouseEnabled" koanf:"mouseEnabled"`
 

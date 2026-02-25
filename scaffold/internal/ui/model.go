@@ -57,7 +57,6 @@ type Model struct {
 	appName string
 
 	// Config-derived fields (extracted from config.Config at construction).
-	altScreen    bool
 	mouseEnabled bool
 	windowTitle  string
 }
@@ -69,7 +68,6 @@ func New(cfg config.Config) Model {
 		screens:      []nav.Screen{screens.NewHomeScreen(cfg.App.Name, false)},
 		th:           theme.New(false),
 		appName:      cfg.App.Name,
-		altScreen:    cfg.UI.AltScreen,
 		mouseEnabled: cfg.UI.MouseEnabled,
 		windowTitle:  cfg.App.Title,
 	}
@@ -82,13 +80,13 @@ func (m Model) renderBanner() (string, int) {
 	if m.width <= 0 {
 		return "", 0
 	}
-	cfg := banner.BannerConfig{
+	cfg := banner.Config{
 		Text:          m.appName,
 		Font:          "smslant",
 		Width:         m.width,
-		Justification: 1, // centered
+		Justification: 0,
 	}
-	s, err := banner.RenderBanner(cfg, m.width)
+	s, err := banner.Render(cfg)
 	if err != nil {
 		// Graceful fallback: plain text line.
 		s = m.appName + "\n"
@@ -260,20 +258,15 @@ func (m Model) View() tea.View {
 	}
 
 	// Wrap everything in the persistent rounded border whose colour tracks the
-	// current theme. In alt-screen mode the border also fills the full height.
+	// current theme.
 	var rendered string
 	if m.width > 0 {
-		bs := m.th.AppBorder.Width(m.width)
-		if m.altScreen && m.height > 0 {
-			bs = bs.Height(m.height)
-		}
-		rendered = bs.Render(content)
+		rendered = m.th.AppBorder.Width(m.width).Render(content)
 	} else {
 		rendered = content
 	}
 
 	v := tea.NewView(rendered)
-	v.AltScreen = m.altScreen
 	v.WindowTitle = m.windowTitle
 	if m.mouseEnabled {
 		v.MouseMode = tea.MouseModeCellMotion

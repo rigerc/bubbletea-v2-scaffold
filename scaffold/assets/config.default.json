@@ -2,7 +2,6 @@
   "logLevel": "info",
   "debug": false,
   "ui": {
-    "altScreen": false,
     "mouseEnabled": true,
     "themeName": "default"
   },

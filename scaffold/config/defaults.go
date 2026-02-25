@@ -9,9 +9,8 @@ func DefaultConfig() *Config {
 		LogLevel: "info",
 		Debug:    false,
 		UI: UIConfig{
-			AltScreen:     false,
-			MouseEnabled:  true,
-			ThemeName:     "default",
+			MouseEnabled: true,
+			ThemeName:    "default",
 		},
 		App: AppConfig{
 			Name:    "scaffold",
