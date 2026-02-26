@@ -17,7 +17,11 @@
       "Bash(cd /mnt/d/dev/projects/bubbletea-v2-scaffold/ralphio && go vet ./... 2>&1)",
       "Bash(go vet:*)",
       "mcp__context7__resolve-library-id",
-      "mcp__context7__query-docs"
+      "mcp__context7__query-docs",
+      "Skill(go-styleguide)",
+      "Skill(bubbletea-v2)",
+      "Skill(huh-v2)",
+      "Skill(koanf)"
     ]
   }
 }

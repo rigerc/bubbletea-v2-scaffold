@@ -5,11 +5,11 @@ import (
 	"charm.land/lipgloss/v2"
 )
 
-// HuhTheme returns a huh.Theme that matches the application palette.
+// HuhTheme returns a huh.Theme that matches the application palette for the given theme name.
 // Uses huh.ThemeFunc so huh drives isDark on every View() call.
-func HuhTheme() huh.Theme {
+func HuhTheme(name string) huh.Theme {
 	return huh.ThemeFunc(func(isDark bool) *huh.Styles {
-		p := NewPalette(isDark)
+		p := NewPalette(name, isDark)
 		s := huh.ThemeCharm(isDark)
 
 		s.Group.Title = s.Group.Title.Foreground(p.Primary).Bold(true)

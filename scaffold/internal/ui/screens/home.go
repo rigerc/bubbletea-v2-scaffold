@@ -53,10 +53,10 @@ func (h Home) SetWidth(w int) Screen {
 	return h
 }
 
-// SetStyles sets the screen styles based on dark/light mode.
-func (h Home) SetStyles(isDark bool) Screen {
+// SetStyles sets the screen styles based on theme name and dark/light mode.
+func (h Home) SetStyles(name string, isDark bool) Screen {
 	h.isDark = isDark
-	h.menu = h.menu.SetStyles(isDark)
+	h.menu = h.menu.SetStyles(name, isDark)
 	return h
 }
 

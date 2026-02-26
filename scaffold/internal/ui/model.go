@@ -110,7 +110,7 @@ func (m rootModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width = msg.Width
 		m.height = msg.Height
 		m.ready = true
-		m.styles = theme.New(m.isDark, m.width)
+		m.styles = theme.New(m.cfg.UI.ThemeName, m.isDark, m.width)
 		m.help.SetWidth(m.styles.MaxWidth)
 
 		// Render banner once (natural width; re-render not needed on resize)
@@ -129,11 +129,11 @@ func (m rootModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.BackgroundColorMsg:
 		m.isDark = msg.IsDark()
-		m.styles = theme.New(m.isDark, m.width)
+		m.styles = theme.New(m.cfg.UI.ThemeName, m.isDark, m.width)
 		m.help.Styles = help.DefaultStyles(m.isDark)
 		// Propagate theme to current screen
-		if setter, ok := m.current.(interface{ SetStyles(bool) screens.Screen }); ok {
-			m.current = setter.SetStyles(m.isDark)
+		if setter, ok := m.current.(interface{ SetStyles(string, bool) screens.Screen }); ok {
+			m.current = setter.SetStyles(m.cfg.UI.ThemeName, m.isDark)
 		}
 		return m, nil
 
@@ -153,8 +153,8 @@ func (m rootModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if setter, ok := m.current.(interface{ SetHeight(int) screens.Screen }); ok {
 			m.current = setter.SetHeight(m.bodyHeight())
 		}
-		if setter, ok := m.current.(interface{ SetStyles(bool) screens.Screen }); ok {
-			m.current = setter.SetStyles(m.isDark)
+		if setter, ok := m.current.(interface{ SetStyles(string, bool) screens.Screen }); ok {
+			m.current = setter.SetStyles(m.cfg.UI.ThemeName, m.isDark)
 		}
 		return m, m.current.Init()
 
@@ -170,12 +170,17 @@ func (m rootModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case screens.SettingsSavedMsg:
-		if msg.Cfg.UI.ShowBanner && m.banner == "" {
-			m.renderBanner()
-		} else if !msg.Cfg.UI.ShowBanner {
-			m.banner = "" // clear cached banner when ShowBanner is disabled
-		}
+		themeChanged := m.cfg.UI.ThemeName != msg.Cfg.UI.ThemeName
 		m.cfg = msg.Cfg
+		if !msg.Cfg.UI.ShowBanner {
+			m.banner = ""
+		} else if m.banner == "" || themeChanged {
+			m.banner = ""
+			m.renderBanner()
+		}
+		if themeChanged {
+			m.styles = theme.New(m.cfg.UI.ThemeName, m.isDark, m.width)
+		}
 		var saveCmd tea.Cmd
 		if m.configPath != "" {
 			if err := config.Save(&m.cfg, m.configPath); err != nil {
@@ -235,7 +240,7 @@ func (m rootModel) View() tea.View {
 // Using a large fixed width lets lipgloss.Width(m.banner) reflect the font's true width,
 // which headerView uses to decide whether the terminal is wide enough to display it.
 func (m *rootModel) renderBanner() {
-	p := theme.NewPalette(m.isDark)
+	p := theme.NewPalette(m.cfg.UI.ThemeName, m.isDark)
 	b, err := banner.Render(banner.Config{
 		Text:          m.cfg.App.Title,
 		Font:          "larry3d",

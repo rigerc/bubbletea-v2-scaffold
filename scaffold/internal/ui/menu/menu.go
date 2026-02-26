@@ -79,13 +79,14 @@ type SelectionMsg struct {
 
 // Model is the menu component.
 type Model struct {
-	list     list.Model
-	delegate list.DefaultDelegate
-	keys     keyMap
-	ready    bool
-	width    int
-	height   int
-	isDark   bool
+	list      list.Model
+	delegate  list.DefaultDelegate
+	keys      keyMap
+	ready     bool
+	width     int
+	height    int
+	isDark    bool
+	themeName string
 }
 
 // New creates a new menu model.
@@ -115,9 +116,9 @@ func (m Model) SetItems(items []Item) Model {
 	if m.ready {
 		m.list.SetItems(listItems)
 	} else {
-		// Create delegate with theme styles if isDark is set
+		// Create delegate with theme styles
 		m.delegate = list.NewDefaultDelegate()
-		p := theme.NewPalette(m.isDark)
+		p := theme.NewPalette(m.themeName, m.isDark)
 		m.delegate.Styles = theme.ListItemStyles(p)
 
 		m.list = list.New(listItems, m.delegate, m.width, m.height)
@@ -134,11 +135,12 @@ func (m Model) SetItems(items []Item) Model {
 	return m
 }
 
-// SetStyles sets the menu styles based on dark/light mode.
-func (m Model) SetStyles(isDark bool) Model {
+// SetStyles sets the menu styles based on theme name and dark/light mode.
+func (m Model) SetStyles(name string, isDark bool) Model {
+	m.themeName = name
 	m.isDark = isDark
 	if m.ready {
-		p := theme.NewPalette(isDark)
+		p := theme.NewPalette(name, isDark)
 		m.list.Styles = theme.ListStyles(p)
 		m.delegate.Styles = theme.ListItemStyles(p)
 	}

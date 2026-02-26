@@ -75,7 +75,7 @@ func NewSettings(cfg config.Config) Settings {
 	km.Quit = key.NewBinding(key.WithKeys("esc"), key.WithHelp("esc", "back"))
 
 	s.form = buildForm(s.groups).
-		WithTheme(theme.HuhTheme()).
+		WithTheme(theme.HuhTheme(cfg.UI.ThemeName)).
 		WithKeyMap(km).
 		WithShowHelp(false)
 	return s
@@ -113,8 +113,8 @@ func (s Settings) SetHeight(h int) Screen {
 	return s
 }
 
-// SetStyles sets the screen styles based on dark/light mode.
-func (s Settings) SetStyles(isDark bool) Screen {
+// SetStyles sets the screen styles based on theme name and dark/light mode.
+func (s Settings) SetStyles(name string, isDark bool) Screen {
 	s.isDark = isDark
 	return s
 }
@@ -216,8 +216,12 @@ func buildForm(groups []config.GroupMeta) *huh.Form {
 func buildField(m config.FieldMeta) huh.Field {
 	switch m.Kind {
 	case config.FieldSelect:
-		opts := make([]huh.Option[string], len(m.Options))
-		for i, o := range m.Options {
+		options := m.Options
+		if m.Key == "ui.themeName" {
+			options = theme.AvailableThemes()
+		}
+		opts := make([]huh.Option[string], len(options))
+		for i, o := range options {
 			opts[i] = huh.NewOption(strings.ToUpper(o[:1])+o[1:], o)
 		}
 		return huh.NewSelect[string]().

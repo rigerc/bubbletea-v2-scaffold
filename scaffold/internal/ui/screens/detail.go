@@ -16,6 +16,7 @@ type Detail struct {
 	screenID    string
 	width       int
 	isDark      bool
+	themeName   string
 	styles      theme.DetailStyles
 }
 
@@ -34,10 +35,11 @@ func (d Detail) SetWidth(w int) Screen {
 	return d
 }
 
-// SetStyles sets the screen styles based on dark/light mode.
-func (d Detail) SetStyles(isDark bool) Screen {
+// SetStyles sets the screen styles based on theme name and dark/light mode.
+func (d Detail) SetStyles(name string, isDark bool) Screen {
+	d.themeName = name
 	d.isDark = isDark
-	d.styles = theme.NewDetailStyles(isDark)
+	d.styles = theme.NewDetailStyles(name, isDark)
 	return d
 }
 

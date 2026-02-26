@@ -46,7 +46,7 @@ type UIConfig struct {
 	MouseEnabled bool `json:"mouseEnabled" mapstructure:"mouseEnabled" koanf:"mouseEnabled" cfg_label:"Mouse Support" cfg_desc:"Enable mouse click and scroll events"`
 
 	// ThemeName specifies the color theme to use.
-	ThemeName string `json:"themeName" mapstructure:"themeName" koanf:"themeName" cfg_label:"Color Theme" cfg_desc:"Visual theme for the application" cfg_options:"default,dark,light"`
+	ThemeName string `json:"themeName" mapstructure:"themeName" koanf:"themeName" cfg_label:"Color Theme" cfg_desc:"Visual theme for the application" cfg_options:"_themes"`
 
 	// ShowBanner controls whether the ASCII art banner is shown in the header.
 	// When false, a styled plain-text title is rendered instead.

@@ -42,11 +42,15 @@ type Palette struct {
 	Info    color.Color
 }
 
-// NewPalette creates a semantic color palette based on the background.
-func NewPalette(isDark bool) Palette {
+// AvailableThemes returns the list of built-in theme names.
+func AvailableThemes() []string {
+	return []string{"default", "ocean", "forest"}
+}
+
+// defaultPalette creates the default charmtone-based palette.
+func defaultPalette(isDark bool) Palette {
 	ld := lipgloss.LightDark(isDark)
 
-	// Primary — named anchor; lightened in dark mode for contrast.
 	var primary, primaryHover, secondary color.Color
 	if isDark {
 		primary = lipgloss.Lighten(charmtone.Zinc, 0.12)
@@ -59,26 +63,102 @@ func NewPalette(isDark bool) Palette {
 	}
 
 	return Palette{
-		// Brand
-		Primary:      primary,
-		PrimaryHover: primaryHover,
-		Secondary:    secondary,
-		// SubtlePrimary: Zinc hue at 30% saturation (go-colorful desaturate)
+		Primary:       primary,
+		PrimaryHover:  primaryHover,
+		Secondary:     secondary,
 		SubtlePrimary: desaturate(charmtone.Zinc, 0.30),
 
-		// Text — adaptive with named charmtone grays
 		TextPrimary:   ld(charmtone.Pepper, charmtone.Salt),
 		TextSecondary: ld(charmtone.Charcoal, charmtone.Ash),
 		TextMuted:     ld(charmtone.Squid, charmtone.Oyster),
 		TextInverse:   charmtone.Pepper,
 
-		// Feedback
-		// Error is the perceptual complement of the primary brand (opposite on color wheel)
-		Error: lipgloss.Complementary(charmtone.Zinc),
-		// Alpha softens the neon brightness of the charmtone feedback colors
+		Error:   lipgloss.Complementary(charmtone.Zinc),
 		Success: lipgloss.Alpha(charmtone.Julep, 0.85),
 		Warning: lipgloss.Alpha(charmtone.Tang, 0.90),
 		Info:    lipgloss.Alpha(charmtone.Thunder, 0.90),
+	}
+}
+
+// oceanPalette creates a steel-blue / teal palette.
+func oceanPalette(isDark bool) Palette {
+	ld := lipgloss.LightDark(isDark)
+
+	base := lipgloss.Color("#4A90D9")
+	sec := lipgloss.Color("#2BC4C4")
+	var primary, primaryHover, secondary color.Color
+	if isDark {
+		primary = lipgloss.Lighten(base, 0.12)
+		primaryHover = lipgloss.Lighten(base, 0.22)
+		secondary = lipgloss.Lighten(sec, 0.12)
+	} else {
+		primary = base
+		primaryHover = lipgloss.Darken(base, 0.08)
+		secondary = sec
+	}
+
+	return Palette{
+		Primary:       primary,
+		PrimaryHover:  primaryHover,
+		Secondary:     secondary,
+		SubtlePrimary: desaturate(base, 0.30),
+
+		TextPrimary:   ld(charmtone.Pepper, charmtone.Salt),
+		TextSecondary: ld(charmtone.Charcoal, charmtone.Ash),
+		TextMuted:     ld(charmtone.Squid, charmtone.Oyster),
+		TextInverse:   charmtone.Pepper,
+
+		Error:   lipgloss.Complementary(base),
+		Success: lipgloss.Alpha(charmtone.Julep, 0.85),
+		Warning: lipgloss.Alpha(charmtone.Tang, 0.90),
+		Info:    lipgloss.Alpha(charmtone.Thunder, 0.90),
+	}
+}
+
+// forestPalette creates a forest-green / amber palette.
+func forestPalette(isDark bool) Palette {
+	ld := lipgloss.LightDark(isDark)
+
+	base := lipgloss.Color("#4A7C59")
+	sec := lipgloss.Color("#C9913D")
+	var primary, primaryHover, secondary color.Color
+	if isDark {
+		primary = lipgloss.Lighten(base, 0.12)
+		primaryHover = lipgloss.Lighten(base, 0.22)
+		secondary = lipgloss.Lighten(sec, 0.12)
+	} else {
+		primary = base
+		primaryHover = lipgloss.Darken(base, 0.08)
+		secondary = sec
+	}
+
+	return Palette{
+		Primary:       primary,
+		PrimaryHover:  primaryHover,
+		Secondary:     secondary,
+		SubtlePrimary: desaturate(base, 0.30),
+
+		TextPrimary:   ld(charmtone.Pepper, charmtone.Salt),
+		TextSecondary: ld(charmtone.Charcoal, charmtone.Ash),
+		TextMuted:     ld(charmtone.Squid, charmtone.Oyster),
+		TextInverse:   charmtone.Pepper,
+
+		Error:   lipgloss.Complementary(base),
+		Success: lipgloss.Alpha(charmtone.Julep, 0.85),
+		Warning: lipgloss.Alpha(charmtone.Tang, 0.90),
+		Info:    lipgloss.Alpha(charmtone.Thunder, 0.90),
+	}
+}
+
+// NewPalette creates a semantic color palette for the given theme name and background.
+func NewPalette(name string, isDark bool) Palette {
+	switch name {
+	case "ocean":
+		return oceanPalette(isDark)
+	case "forest":
+		return forestPalette(isDark)
+	default:
+		return defaultPalette(isDark)
 	}
 }
 
@@ -132,9 +212,9 @@ func newStylesFromPalette(p Palette, width int) Styles {
 	}
 }
 
-// New creates Styles with adaptive colors.
-func New(isDark bool, width int) Styles {
-	return newStylesFromPalette(NewPalette(isDark), width)
+// New creates Styles with adaptive colors for the given theme name.
+func New(name string, isDark bool, width int) Styles {
+	return newStylesFromPalette(NewPalette(name, isDark), width)
 }
 
 // DetailStyles holds styles for the detail screen.
@@ -155,9 +235,9 @@ func newDetailStylesFromPalette(p Palette) DetailStyles {
 	}
 }
 
-// NewDetailStyles creates detail styles with adaptive colors.
-func NewDetailStyles(isDark bool) DetailStyles {
-	return newDetailStylesFromPalette(NewPalette(isDark))
+// NewDetailStyles creates detail styles with adaptive colors for the given theme name.
+func NewDetailStyles(name string, isDark bool) DetailStyles {
+	return newDetailStylesFromPalette(NewPalette(name, isDark))
 }
 
 // StatusStyles provides pre-built styles for status messages.
@@ -168,9 +248,9 @@ type StatusStyles struct {
 	Info    lipgloss.Style
 }
 
-// NewStatusStyles creates status styles from a Palette.
-func NewStatusStyles(isDark bool) StatusStyles {
-	p := NewPalette(isDark)
+// NewStatusStyles creates status styles from a Palette for the given theme name.
+func NewStatusStyles(name string, isDark bool) StatusStyles {
+	p := NewPalette(name, isDark)
 	return StatusStyles{
 		Success: lipgloss.NewStyle().Foreground(p.Success).Bold(true),
 		Error:   lipgloss.NewStyle().Foreground(p.Error).Bold(true),
