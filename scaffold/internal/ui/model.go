@@ -349,7 +349,11 @@ func (m rootModel) bodyHeight() int {
 // footerView renders the status bar footer.
 func (m rootModel) footerView() string {
 	left := m.styles.StatusLeft.Render(" " + m.status + " ")
-	right := m.styles.StatusRight.Render(" v" + m.cfg.App.Version + " ")
+	rightContent := " v" + m.cfg.App.Version
+	if m.cfg.Debug {
+		rightContent += " [DEBUG]"
+	}
+	right := m.styles.StatusRight.Render(rightContent + " ")
 
 	// Account for footer border (2) and padding (1)
 	innerWidth := m.styles.MaxWidth - 3

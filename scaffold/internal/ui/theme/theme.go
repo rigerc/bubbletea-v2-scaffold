@@ -245,7 +245,7 @@ func newStylesFromPalette(p Palette, width int) Styles {
 	return Styles{
 		MaxWidth: maxWidth,
 		App:      lipgloss.NewStyle().Width(maxWidth).Padding(0, 0),
-		Header:   lipgloss.NewStyle().Padding(2).PaddingBottom(1),
+		Header:   lipgloss.NewStyle().Padding(2).MarginBottom(0).PaddingBottom(0),
 		PlainTitle: lipgloss.NewStyle().
 			Bold(true).
 			Foreground(p.Primary).
@@ -352,9 +352,8 @@ func ListItemStyles(p Palette) list.DefaultItemStyles {
 	// Selected state (focused item)
 	s.SelectedTitle = lipgloss.NewStyle().
 		Foreground(p.PrimaryHover).
-		MarginLeft(2).
 		Bold(true)
-	s.SelectedDesc = lipgloss.NewStyle().Foreground(p.TextMuted).MarginLeft(2)
+	s.SelectedDesc = lipgloss.NewStyle().Foreground(p.TextMuted)
 
 	// Dimmed state (when filter input is activated)
 	s.DimmedTitle = lipgloss.NewStyle().Foreground(p.TextMuted)

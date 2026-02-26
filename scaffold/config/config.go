@@ -37,7 +37,7 @@ type Config struct {
 	UI UIConfig `json:"ui" mapstructure:"ui" koanf:"ui" cfg_label:"UI Settings"`
 
 	// App contains general application configuration.
-	App AppConfig `json:"app" mapstructure:"app" koanf:"app" cfg_label:"Application"`
+	App AppConfig `json:"app" mapstructure:"app" koanf:"app" cfg_label:"Application" cfg_exclude:"true"`
 }
 
 // UIConfig contains configuration specific to the user interface.

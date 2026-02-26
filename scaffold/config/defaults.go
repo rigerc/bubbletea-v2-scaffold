@@ -7,7 +7,7 @@ package config
 func DefaultConfig() *Config {
 	return &Config{
 		LogLevel: "info",
-		Debug:    false,
+		Debug:    true,
 		UI: UIConfig{
 			MouseEnabled: true,
 			ThemeName:    "ember",

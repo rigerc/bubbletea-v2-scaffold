@@ -18,11 +18,11 @@ const (
 
 // FieldMeta holds UI metadata for a single config field.
 type FieldMeta struct {
-	Key      string        // dot-path koanf key, e.g. "ui.themeName"
-	Label    string        // cfg_label tag, falls back to struct field name
-	Desc     string        // cfg_desc tag
+	Key      string // dot-path koanf key, e.g. "ui.themeName"
+	Label    string // cfg_label tag, falls back to struct field name
+	Desc     string // cfg_desc tag
 	Kind     FieldKind
-	Options  []string      // non-nil only for FieldSelect
+	Options  []string // non-nil only for FieldSelect
 	ReadOnly bool
 	Value    reflect.Value // settable Value pointing into the working *Config
 }
@@ -47,6 +47,9 @@ func Schema(cfg *Config) []GroupMeta {
 		fv := rv.Field(i)
 		koanfKey := sf.Tag.Get("koanf")
 		if koanfKey == "" {
+			continue
+		}
+		if sf.Tag.Get("cfg_exclude") == "true" {
 			continue
 		}
 		if fv.Kind() == reflect.Struct {
