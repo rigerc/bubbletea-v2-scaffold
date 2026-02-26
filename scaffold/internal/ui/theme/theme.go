@@ -1,4 +1,3 @@
-// Package theme provides styling for the TUI.
 package theme
 
 import (
@@ -10,6 +9,7 @@ import (
 	"github.com/charmbracelet/x/exp/charmtone"
 	colorful "github.com/lucasb-eyer/go-colorful"
 )
+
 
 // desaturate returns c with its HSL saturation reduced to s (0–1).
 // go-colorful is used here because lipgloss has no saturation adjuster.
