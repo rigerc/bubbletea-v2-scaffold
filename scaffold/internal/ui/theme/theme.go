@@ -7,54 +7,84 @@ import (
 	"charm.land/bubbles/v2/list"
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/exp/charmtone"
+	colorful "github.com/lucasb-eyer/go-colorful"
 )
+
+// desaturate returns c with its HSL saturation reduced to s (0–1).
+// go-colorful is used here because lipgloss has no saturation adjuster.
+func desaturate(c color.Color, s float64) color.Color {
+	cf, ok := colorful.MakeColor(c)
+	if !ok {
+		return c
+	}
+	h, _, l := cf.Hsl()
+	return colorful.Hsl(h, s, l)
+}
 
 // Palette defines semantic colors for the application theme.
 type Palette struct {
 	// Brand
-	Accent          color.Color // Zinc - primary brand (teal)
-	AccentSecondary color.Color // Charple - secondary brand (purple)
-	AccentHover     color.Color // Turtle - hover state (cyan)
-	SubtlePrimary   color.Color // Guac - muted primary, unfocused primary items
+	Primary       color.Color // primary brand
+	PrimaryHover  color.Color // primary hover state
+	Secondary     color.Color // secondary brand
+	SubtlePrimary color.Color // muted primary, unfocused primary items
 
-	// Foreground (adaptive)
-	Foreground color.Color // Primary text
-	Muted      color.Color // Secondary text
-	Subtle     color.Color // Borders, subtle elements
+	// Text (adaptive)
+	TextPrimary   color.Color // primary text
+	TextSecondary color.Color // secondary text
+	TextMuted     color.Color // borders, subtle elements
+	TextInverse   color.Color // text on brand-color backgrounds
 
 	// Status (always visible)
-	Success color.Color // Julep
-	Error   color.Color // Sriracha
-	Warning color.Color // Tang
-	Info    color.Color // Thunder
-
-	// Special
-	Inverse color.Color // Text on accent backgrounds (Pepper)
+	Success color.Color
+	Error   color.Color
+	Warning color.Color
+	Info    color.Color
 }
 
 // NewPalette creates a semantic color palette based on the background.
 func NewPalette(isDark bool) Palette {
 	ld := lipgloss.LightDark(isDark)
 
+	// Primary — named anchor; lightened in dark mode for contrast.
+	var primary, primaryHover, secondary color.Color
+	if isDark {
+		primary = lipgloss.Lighten(charmtone.Zinc, 0.12)
+		primaryHover = lipgloss.Lighten(charmtone.Zinc, 0.22)
+		secondary = lipgloss.Lighten(charmtone.Charple, 0.12)
+	} else {
+		primary = charmtone.Zinc
+		primaryHover = lipgloss.Darken(charmtone.Zinc, 0.08)
+		secondary = charmtone.Charple
+	}
+
 	return Palette{
-		Accent:          charmtone.Zinc,
-		AccentSecondary: charmtone.Charple,
-		AccentHover:     charmtone.Turtle,
-		SubtlePrimary:   charmtone.Guac,
-		Foreground:  ld(charmtone.Pepper, charmtone.Salt),
-		Muted:       ld(charmtone.Charcoal, charmtone.Ash),
-		Subtle:      ld(charmtone.Squid, charmtone.Oyster),
-		Success:     charmtone.Julep,
-		Error:       charmtone.Sriracha,
-		Warning:     charmtone.Tang,
-		Info:        charmtone.Thunder,
-		Inverse:     charmtone.Pepper,
+		// Brand
+		Primary:      primary,
+		PrimaryHover: primaryHover,
+		Secondary:    secondary,
+		// SubtlePrimary: Zinc hue at 30% saturation (go-colorful desaturate)
+		SubtlePrimary: desaturate(charmtone.Zinc, 0.30),
+
+		// Text — adaptive with named charmtone grays
+		TextPrimary:   ld(charmtone.Pepper, charmtone.Salt),
+		TextSecondary: ld(charmtone.Charcoal, charmtone.Ash),
+		TextMuted:     ld(charmtone.Squid, charmtone.Oyster),
+		TextInverse:   charmtone.Pepper,
+
+		// Feedback
+		// Error is the perceptual complement of the primary brand (opposite on color wheel)
+		Error: lipgloss.Complementary(charmtone.Zinc),
+		// Alpha softens the neon brightness of the charmtone feedback colors
+		Success: lipgloss.Alpha(charmtone.Julep, 0.85),
+		Warning: lipgloss.Alpha(charmtone.Tang, 0.90),
+		Info:    lipgloss.Alpha(charmtone.Thunder, 0.90),
 	}
 }
 
-// AccentHex returns the accent color as a hex string (without '#').
+// AccentHex returns the primary accent color as a hex string (without '#').
 func AccentHex() string {
-	return charmtone.Zinc.Hex()
+	return charmtone.Zinc.Hex()[1:] // strip leading '#'
 }
 
 // Styles holds all styled components for the UI.
@@ -83,26 +113,26 @@ func newStylesFromPalette(p Palette, width int) Styles {
 		Header:   lipgloss.NewStyle().Padding(2).PaddingBottom(1),
 		PlainTitle: lipgloss.NewStyle().
 			Bold(true).
-			Foreground(p.Accent).
+			Foreground(p.Primary).
 			Border(lipgloss.NormalBorder(), false, false, true, false).
-			BorderForeground(p.AccentSecondary).
+			BorderForeground(p.Secondary).
 			PaddingBottom(1),
-		Body: lipgloss.NewStyle().Padding(0, 3).Foreground(p.Foreground),
-		Help:     lipgloss.NewStyle().MarginTop(0).Padding(0, 3),
+		Body: lipgloss.NewStyle().Padding(0, 3).Foreground(p.TextPrimary),
+		Help: lipgloss.NewStyle().MarginTop(0).Padding(0, 3),
 		Footer: lipgloss.NewStyle().
 			MarginTop(1).
 			Border(lipgloss.RoundedBorder(), true).
-			BorderForeground(p.Muted).
+			BorderForeground(p.TextSecondary).
 			PaddingLeft(1),
 		StatusLeft: lipgloss.NewStyle().
-			Background(p.Accent).
-			Foreground(p.Inverse).
+			Background(p.Primary).
+			Foreground(p.TextInverse).
 			Bold(true),
-		StatusRight: lipgloss.NewStyle().Foreground(p.Subtle),
+		StatusRight: lipgloss.NewStyle().Foreground(p.TextMuted),
 	}
 }
 
-// New creates Styles with adaptive colors. Backward compatible.
+// New creates Styles with adaptive colors.
 func New(isDark bool, width int) Styles {
 	return newStylesFromPalette(NewPalette(isDark), width)
 }
@@ -118,14 +148,14 @@ type DetailStyles struct {
 // newDetailStylesFromPalette creates DetailStyles from a Palette.
 func newDetailStylesFromPalette(p Palette) DetailStyles {
 	return DetailStyles{
-		Title:   lipgloss.NewStyle().Bold(true).Foreground(p.Accent).MarginBottom(1),
-		Desc:    lipgloss.NewStyle().Foreground(p.Subtle).MarginBottom(2),
-		Content: lipgloss.NewStyle().Foreground(p.Foreground),
-		Info:    lipgloss.NewStyle().Foreground(p.Muted).Italic(true),
+		Title:   lipgloss.NewStyle().Bold(true).Foreground(p.Primary).MarginBottom(1),
+		Desc:    lipgloss.NewStyle().Foreground(p.TextMuted).MarginBottom(2),
+		Content: lipgloss.NewStyle().Foreground(p.TextPrimary),
+		Info:    lipgloss.NewStyle().Foreground(p.TextSecondary).Italic(true),
 	}
 }
 
-// NewDetailStyles creates detail styles with adaptive colors. Backward compatible.
+// NewDetailStyles creates detail styles with adaptive colors.
 func NewDetailStyles(isDark bool) DetailStyles {
 	return newDetailStylesFromPalette(NewPalette(isDark))
 }
@@ -155,18 +185,18 @@ func ListStyles(p Palette) list.Styles {
 
 	s.TitleBar = lipgloss.NewStyle().Padding(0, 0, 1, 2)
 	s.Title = lipgloss.NewStyle().
-		Background(p.AccentHover).
-		Foreground(p.Inverse).
+		Background(p.PrimaryHover).
+		Foreground(p.TextInverse).
 		Padding(0, 1)
-	s.Spinner = lipgloss.NewStyle().Foreground(p.Accent)
-	s.PaginationStyle = lipgloss.NewStyle().Foreground(p.Subtle).PaddingLeft(2)
-	s.HelpStyle = lipgloss.NewStyle().Foreground(p.Muted).Padding(1, 0, 0, 2)
-	s.StatusBar = lipgloss.NewStyle().Foreground(p.Muted).Padding(0, 0, 1, 2)
-	s.StatusEmpty = lipgloss.NewStyle().Foreground(p.Subtle)
-	s.NoItems = lipgloss.NewStyle().Foreground(p.Muted)
-	s.ActivePaginationDot = lipgloss.NewStyle().Foreground(p.Accent).SetString("•")
-	s.InactivePaginationDot = lipgloss.NewStyle().Foreground(p.Subtle).SetString("•")
-	s.DividerDot = lipgloss.NewStyle().Foreground(p.Subtle).SetString(" • ")
+	s.Spinner = lipgloss.NewStyle().Foreground(p.Primary)
+	s.PaginationStyle = lipgloss.NewStyle().Foreground(p.TextMuted).PaddingLeft(2)
+	s.HelpStyle = lipgloss.NewStyle().Foreground(p.TextSecondary).Padding(1, 0, 0, 2)
+	s.StatusBar = lipgloss.NewStyle().Foreground(p.TextSecondary).Padding(0, 0, 1, 2)
+	s.StatusEmpty = lipgloss.NewStyle().Foreground(p.TextMuted)
+	s.NoItems = lipgloss.NewStyle().Foreground(p.TextSecondary)
+	s.ActivePaginationDot = lipgloss.NewStyle().Foreground(p.Primary).SetString("•")
+	s.InactivePaginationDot = lipgloss.NewStyle().Foreground(p.TextMuted).SetString("•")
+	s.DividerDot = lipgloss.NewStyle().Foreground(p.TextMuted).SetString(" • ")
 
 	return s
 }
@@ -175,25 +205,22 @@ func ListStyles(p Palette) list.Styles {
 func ListItemStyles(p Palette) list.DefaultItemStyles {
 	s := list.NewDefaultItemStyles(false)
 
-	// Generate accent variant for unfocused items
-	//accentNormal := lipgloss.Lighten(p.Accent, 0.70)
-
 	// Normal state (unfocused items)
 	s.NormalTitle = lipgloss.NewStyle().Foreground(p.SubtlePrimary)
-	s.NormalDesc = lipgloss.NewStyle().Foreground(p.Muted)
+	s.NormalDesc = lipgloss.NewStyle().Foreground(p.TextSecondary)
 
 	// Selected state (focused item)
 	s.SelectedTitle = lipgloss.NewStyle().
-		Foreground(p.AccentHover).
+		Foreground(p.PrimaryHover).
 		Bold(true)
-	s.SelectedDesc = lipgloss.NewStyle().Foreground(p.Subtle)
+	s.SelectedDesc = lipgloss.NewStyle().Foreground(p.TextMuted)
 
 	// Dimmed state (when filter input is activated)
-	s.DimmedTitle = lipgloss.NewStyle().Foreground(p.Subtle)
-	s.DimmedDesc = lipgloss.NewStyle().Foreground(p.Subtle)
+	s.DimmedTitle = lipgloss.NewStyle().Foreground(p.TextMuted)
+	s.DimmedDesc = lipgloss.NewStyle().Foreground(p.TextMuted)
 
 	// Filter match
-	s.FilterMatch = lipgloss.NewStyle().Foreground(p.Accent)
+	s.FilterMatch = lipgloss.NewStyle().Foreground(p.Primary)
 
 	return s
 }

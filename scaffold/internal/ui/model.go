@@ -235,12 +235,13 @@ func (m rootModel) View() tea.View {
 // Using a large fixed width lets lipgloss.Width(m.banner) reflect the font's true width,
 // which headerView uses to decide whether the terminal is wide enough to display it.
 func (m *rootModel) renderBanner() {
+	p := theme.NewPalette(m.isDark)
 	b, err := banner.Render(banner.Config{
 		Text:          m.cfg.App.Title,
 		Font:          "larry3d",
 		Width:         100,
 		Justification: 0,
-		Color:         theme.AccentHex(),
+		Gradient:      banner.GradientThemed(p.Primary, p.Secondary),
 	})
 	if err != nil {
 		b = m.cfg.App.Title

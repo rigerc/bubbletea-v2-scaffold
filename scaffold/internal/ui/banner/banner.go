@@ -4,9 +4,12 @@ package banner
 
 import (
 	"fmt"
+	"image/color"
 	"math/rand/v2"
 	"strings"
 
+	"charm.land/lipgloss/v2"
+	colorful "github.com/lucasb-eyer/go-colorful"
 	"github.com/lsferreira42/figlet-go/figlet"
 )
 
@@ -178,6 +181,24 @@ func RandomGradient() Gradient {
 func RandomFont() string {
 	fonts := figlet.ListFonts()
 	return fonts[rand.IntN(len(fonts))]
+}
+
+// GradientThemed builds a *Gradient that flows from primary to secondary by
+// blending them across 7 stops with lipgloss.Blend1D.
+// Returns *Gradient so it can be assigned inline in banner.Config{Gradient: ...}.
+// Pass palette.Primary and palette.Secondary to derive a theme-matched gradient.
+func GradientThemed(primary, secondary color.Color) *Gradient {
+	stops := lipgloss.Blend1D(7, primary, secondary)
+	hexes := make([]string, len(stops))
+	for i, c := range stops {
+		cf, ok := colorful.MakeColor(c)
+		if !ok {
+			hexes[i] = "888888"
+			continue
+		}
+		hexes[i] = cf.Hex()[1:] // strip leading '#'
+	}
+	return &Gradient{Name: "themed", Colors: hexes}
 }
 
 // Config defines parameters for rendering an ASCII banner.

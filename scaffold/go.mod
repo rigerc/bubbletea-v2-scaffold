@@ -7,12 +7,13 @@ require (
 	charm.land/bubbletea/v2 v2.0.0
 	charm.land/huh/v2 v2.0.0-20260105203756-d8977490d20c
 	charm.land/lipgloss/v2 v2.0.0
-	github.com/charmbracelet/x/exp/charmtone v0.0.0-20260223200540-d6a276319c45
+	github.com/charmbracelet/x/exp/charmtone v0.0.0-20260225200202-61df8bc4b903
 	github.com/knadh/koanf/parsers/json v1.0.0
 	github.com/knadh/koanf/providers/file v1.2.1
 	github.com/knadh/koanf/providers/rawbytes v1.0.0
 	github.com/knadh/koanf/v2 v2.1.2
 	github.com/lsferreira42/figlet-go v0.0.2-beta
+	github.com/lucasb-eyer/go-colorful v1.3.0
 	github.com/rs/zerolog v1.33.0
 	github.com/spf13/cobra v1.9.1
 )
@@ -36,7 +37,6 @@ require (
 	github.com/go-viper/mapstructure/v2 v2.2.1 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/knadh/koanf/maps v0.1.1 // indirect
-	github.com/lucasb-eyer/go-colorful v1.3.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.20 // indirect

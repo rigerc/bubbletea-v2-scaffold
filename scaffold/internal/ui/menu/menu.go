@@ -230,7 +230,7 @@ func (m Model) RequiredHeight() int {
 	spacing := m.delegate.Spacing()
 
 	// Title area: title (1) + blank line (1)
-	const titleHeight = 2
+	const titleHeight = 0
 
 	// Calculate total: title + (items * height) + spacing between items
 	itemsHeight := count * itemHeight
@@ -239,5 +239,5 @@ func (m Model) RequiredHeight() int {
 		totalSpacing = 0
 	}
 
-	return titleHeight + itemsHeight + totalSpacing + 2
+	return titleHeight + itemsHeight + totalSpacing + 1
 }
