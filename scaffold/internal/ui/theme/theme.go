@@ -8,10 +8,8 @@ import (
 
 	"charm.land/bubbles/v2/list"
 	"charm.land/lipgloss/v2"
-	"github.com/charmbracelet/x/exp/charmtone"
 	colorful "github.com/lucasb-eyer/go-colorful"
 )
-
 
 // -----------------------------------------------------------------------------
 // HCL-Based Color Manipulation (Perceptually Uniform)
@@ -167,10 +165,11 @@ func ValidatePalette(p Palette) []string {
 // Palette defines semantic colors for the application theme.
 type Palette struct {
 	// Brand
-	Primary       color.Color // primary brand
-	PrimaryHover  color.Color // primary hover state
-	Secondary     color.Color // secondary brand
-	SubtlePrimary color.Color // muted primary, unfocused primary items
+	Primary         color.Color // primary brand
+	PrimaryHover    color.Color // primary hover state
+	Secondary       color.Color // secondary brand
+	SubtlePrimary   color.Color // muted primary, unfocused primary items
+	SubtleSecondary color.Color // muted secondary, unfocused secondary items
 
 	// Text (adaptive)
 	TextPrimary   color.Color // primary text
@@ -240,21 +239,22 @@ func buildPalette(base, sec color.Color, isDark bool) Palette {
 
 	// Fixed status colors for consistent UX - independent of brand
 	// These are recognizable emotional anchors that users expect
-	fixedError := ld(lipgloss.Color("#FF4444"), lipgloss.Color("#CC3333"))    // Red - always red
-	fixedSuccess := ld(lipgloss.Color("#44DD66"), lipgloss.Color("#22AA44"))  // Green - always green
-	fixedWarning := ld(lipgloss.Color("#FFAA22"), lipgloss.Color("#DD8800"))  // Amber - always amber
-	fixedInfo := ld(lipgloss.Color("#44AAFF"), lipgloss.Color("#2277DD"))     // Blue - always blue
+	fixedError := ld(lipgloss.Color("#FF4444"), lipgloss.Color("#CC3333"))   // Red - always red
+	fixedSuccess := ld(lipgloss.Color("#44DD66"), lipgloss.Color("#22AA44")) // Green - always green
+	fixedWarning := ld(lipgloss.Color("#FFAA22"), lipgloss.Color("#DD8800")) // Amber - always amber
+	fixedInfo := ld(lipgloss.Color("#44AAFF"), lipgloss.Color("#2277DD"))    // Blue - always blue
 
 	return Palette{
-		Primary:       primary,
-		PrimaryHover:  primaryHover,
-		Secondary:     secondary,
-		SubtlePrimary: desaturate(base, 0.30),
+		Primary:         primary,
+		PrimaryHover:    primaryHover,
+		Secondary:       secondary,
+		SubtlePrimary:   desaturate(base, 0.30),
+		SubtleSecondary: desaturate(secondary, 0.30),
 
-		TextPrimary:   ld(charmtone.Pepper, charmtone.Salt),
-		TextSecondary: ld(charmtone.Charcoal, charmtone.Ash),
-		TextMuted:     ld(charmtone.Squid, charmtone.Oyster),
-		TextInverse:   charmtone.Pepper,
+		TextPrimary:   ld(lipgloss.Color("#201F26"), lipgloss.Color("#F1EFEF")),
+		TextSecondary: ld(lipgloss.Color("#3A3943"), lipgloss.Color("#DFDBDD")),
+		TextMuted:     ld(lipgloss.Color("#858392"), lipgloss.Color("#605F6B")),
+		TextInverse:   lipgloss.Color("#201F26"),
 
 		Error:   fixedError,
 		Success: fixedSuccess,
@@ -289,8 +289,8 @@ func NewPalette(name string, isDark bool) Palette {
 func init() {
 	RegisterTheme(ThemeSpec{
 		Name:      "default",
-		Base:      charmtone.Zinc,
-		Secondary: charmtone.Charple,
+		Base:      lipgloss.Color("#10B1AE"),
+		Secondary: lipgloss.Color("#6B50FF"),
 	})
 
 	RegisterTheme(ThemeSpec{
@@ -322,7 +322,7 @@ func init() {
 		Base:      lipgloss.Color("#8B1E3F"),
 		Secondary: lipgloss.Color("#CFAE70"),
 		Modify: func(p Palette, _ bool) Palette {
-			p.TextInverse = charmtone.Salt
+			p.TextInverse = lipgloss.Color("#F1EFEF")
 			return p
 		},
 	})
@@ -348,11 +348,6 @@ func init() {
 	})
 }
 
-// AccentHex returns the primary accent color as a hex string (without '#').
-func AccentHex() string {
-	return charmtone.Zinc.Hex()[1:] // strip leading '#'
-}
-
 // Styles holds all styled components for the UI.
 type Styles struct {
 	App         lipgloss.Style
@@ -368,7 +363,7 @@ type Styles struct {
 
 // newStylesFromPalette creates Styles from a Palette.
 func newStylesFromPalette(p Palette, width int) Styles {
-	maxWidth := width * 70 / 100
+	maxWidth := width * 90 / 100
 	if maxWidth < 40 {
 		maxWidth = width - 4
 	}
@@ -388,10 +383,10 @@ func newStylesFromPalette(p Palette, width int) Styles {
 		Footer: lipgloss.NewStyle().
 			MarginTop(1).
 			Border(lipgloss.RoundedBorder(), true).
-			BorderForeground(p.TextSecondary).
+			BorderForeground(p.TextMuted).
 			PaddingLeft(1),
 		StatusLeft: lipgloss.NewStyle().
-			Background(p.Primary).
+			Background(p.SubtlePrimary).
 			Foreground(p.TextInverse).
 			Bold(true),
 		StatusRight: lipgloss.NewStyle().Foreground(p.TextMuted),
@@ -478,13 +473,13 @@ func ListItemStyles(p Palette) list.DefaultItemStyles {
 
 	// Normal state (unfocused items)
 	s.NormalTitle = lipgloss.NewStyle().Foreground(p.Primary)
-	s.NormalDesc = lipgloss.NewStyle().Foreground(p.TextSecondary)
+	s.NormalDesc = lipgloss.NewStyle().Foreground(p.TextMuted)
 
 	// Selected state (focused item)
 	s.SelectedTitle = lipgloss.NewStyle().
 		Foreground(p.PrimaryHover).
 		Bold(true)
-	s.SelectedDesc = lipgloss.NewStyle().Foreground(p.TextMuted)
+	s.SelectedDesc = lipgloss.NewStyle().Foreground(p.SubtleSecondary)
 
 	// Dimmed state (when filter input is activated)
 	s.DimmedTitle = lipgloss.NewStyle().Foreground(p.TextMuted)

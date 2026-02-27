@@ -59,18 +59,12 @@ func TestLoad_MissingFieldsGetDefaults(t *testing.T) {
 	cfg, err := Load(path)
 	require.NoError(t, err)
 
-	// Explicitly set value preserved
-	assert.Equal(t, "debug", cfg.LogLevel)
+	// Build expected config: defaults with only logLevel overridden
+	expected := DefaultConfig()
+	expected.LogLevel = "debug"
 
-	// Missing fields get defaults (not zero values)
-	defaults := DefaultConfig()
-	assert.Equal(t, defaults.Debug, cfg.Debug, "missing debug should get default")
-	assert.Equal(t, defaults.UI.MouseEnabled, cfg.UI.MouseEnabled, "missing ui.mouseEnabled should get default")
-	assert.Equal(t, defaults.UI.ThemeName, cfg.UI.ThemeName, "missing ui.themeName should get default")
-	assert.Equal(t, defaults.UI.ShowBanner, cfg.UI.ShowBanner, "missing ui.showBanner should get default")
-	assert.Equal(t, defaults.App.Name, cfg.App.Name, "missing app.name should get default")
-	assert.Equal(t, defaults.App.Version, cfg.App.Version, "missing app.version should get default")
-	assert.Equal(t, defaults.App.Description, cfg.App.Description, "missing app.description should get default")
+	// Compare entire structs - this catches any field that doesn't match defaults
+	assert.Equal(t, expected, cfg, "missing fields should get default values")
 }
 
 // TestLoad_UserValuesOverrideDefaults verifies that user-specified values
@@ -119,13 +113,12 @@ func TestLoadFromBytes_MissingFieldsGetDefaults(t *testing.T) {
 	cfg, err := LoadFromBytes([]byte(`{"logLevel":"debug"}`))
 	require.NoError(t, err)
 
-	// Explicitly set value preserved
-	assert.Equal(t, "debug", cfg.LogLevel)
+	// Build expected config: defaults with only logLevel overridden
+	expected := DefaultConfig()
+	expected.LogLevel = "debug"
 
-	// Missing fields get defaults (not zero values)
-	defaults := DefaultConfig()
-	assert.Equal(t, defaults.Debug, cfg.Debug, "missing debug should get default")
-	assert.Equal(t, defaults.UI.ThemeName, cfg.UI.ThemeName, "missing ui.themeName should get default")
+	// Compare entire structs - this catches any field that doesn't match defaults
+	assert.Equal(t, expected, cfg, "missing fields should get default values")
 }
 
 // TestLoadFromBytes_UserValuesOverrideDefaults verifies that user-specified values
