@@ -14,6 +14,10 @@ import (
 	"github.com/knadh/koanf/v2"
 )
 
+// CurrentConfigVersion is the schema version written by this build.
+// Increment this whenever a breaking change is made to the Config struct.
+const CurrentConfigVersion = 1
+
 var (
 	// ErrInvalidConfig is returned when the configuration validation fails.
 	ErrInvalidConfig = errors.New("invalid configuration")
@@ -25,6 +29,10 @@ var (
 // Config holds the application configuration.
 // All fields are exported to support JSON marshaling and environment variable binding.
 type Config struct {
+	// ConfigVersion tracks the schema version. Used by NeedsUpgrade to detect
+	// configs written by older builds. Not shown in the settings UI (cfg_exclude).
+	ConfigVersion int `json:"configVersion" koanf:"configVersion" cfg_exclude:"true"`
+
 	// LogLevel specifies the logging verbosity level.
 	// Valid values: trace, debug, info, warn, error, fatal
 	LogLevel string `json:"logLevel" mapstructure:"logLevel" koanf:"logLevel" cfg_label:"Log Level" cfg_desc:"Logging verbosity (effective level shown in footer)" cfg_options:"trace,debug,info,warn,error,fatal"`

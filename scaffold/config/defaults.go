@@ -6,7 +6,8 @@ package config
 // setting environment variables.
 func DefaultConfig() *Config {
 	return &Config{
-		LogLevel: "info",
+		ConfigVersion: CurrentConfigVersion,
+		LogLevel:      "info",
 		Debug:    true,
 		UI: UIConfig{
 			MouseEnabled: true,

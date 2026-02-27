@@ -1,15 +1,19 @@
 package ui
 
 import (
+	"context"
+
 	"charm.land/bubbles/v2/help"
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
 	"scaffold/config"
+	"scaffold/internal/task"
 	"scaffold/internal/ui/banner"
 	"scaffold/internal/ui/keys"
 	"scaffold/internal/ui/menu"
+	"scaffold/internal/ui/modal"
 	"scaffold/internal/ui/screens"
 	"scaffold/internal/ui/status"
 	"scaffold/internal/ui/theme"
@@ -56,8 +60,11 @@ func (s *screenStack) Len() int {
 
 // rootModel is the root tea.Model — owns routing, WindowSize, header/footer.
 type rootModel struct {
+	ctx          context.Context
+	cancel       context.CancelFunc
 	cfg          config.Config
 	configPath   string // empty = no persistent save
+	firstRun     bool
 	status       status.State
 	statusStyles status.Styles
 	width        int
@@ -68,15 +75,19 @@ type rootModel struct {
 	styles       theme.Styles
 	keys         keys.GlobalKeyMap
 	help         help.Model
+	modal        modal.Model
 	current      screens.Screen
 	stack        screenStack
 }
 
 // newRootModel creates a new root model.
-func newRootModel(cfg config.Config, configPath string) rootModel {
+func newRootModel(ctx context.Context, cancel context.CancelFunc, cfg config.Config, configPath string, firstRun bool) rootModel {
 	return rootModel{
+		ctx:        ctx,
+		cancel:     cancel,
 		cfg:        cfg,
 		configPath: configPath,
+		firstRun:   firstRun,
 		status:     status.State{Text: "Ready", Kind: status.KindNone},
 		themeMgr:   theme.GetManager(),
 		current:    screens.NewHome(),
@@ -87,10 +98,16 @@ func newRootModel(cfg config.Config, configPath string) rootModel {
 
 // Init initializes the root model.
 func (m rootModel) Init() tea.Cmd {
-	return tea.Batch(
+	cmds := tea.Batch(
 		tea.RequestBackgroundColor,
 		m.themeMgr.Init(m.cfg.UI.ThemeName, false, m.width),
 	)
+	if m.firstRun {
+		return tea.Batch(cmds, func() tea.Msg {
+			return NavigateMsg{Screen: screens.NewWelcome()}
+		})
+	}
+	return cmds
 }
 
 // Update handles messages for the root model.
@@ -133,9 +150,43 @@ func (m rootModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case tea.KeyPressMsg:
+		// Route key events to the modal when it is visible.
+		if m.modal.Visible() {
+			var cmd tea.Cmd
+			m.modal, cmd = m.modal.Update(msg)
+			return m, cmd
+		}
 		if key.Matches(msg, m.keys.Quit) {
+			m.cancel()
 			return m, tea.Quit
 		}
+
+	case modal.ShowMsg:
+		m.modal = modal.New(msg, m.themeMgr.State().Palette)
+		return m, nil
+
+	case modal.ConfirmedMsg, modal.CancelledMsg, modal.PromptSubmittedMsg:
+		m.modal = modal.Model{}
+		updated, cmd := m.current.Update(msg)
+		if s, ok := updated.(screens.Screen); ok {
+			m.current = s
+		}
+		return m, cmd
+
+	case task.ErrMsg:
+		return m, status.SetError(msg.Err.Error(), 0)
+
+	case screens.WelcomeDoneMsg:
+		m.cfg.ConfigVersion = config.CurrentConfigVersion
+		if m.configPath != "" {
+			if err := config.Save(&m.cfg, m.configPath); err != nil {
+				return m, status.SetError("Save failed: "+err.Error(), 0)
+			}
+		}
+		if m.stack.Len() > 0 {
+			m.current = m.stack.Pop()
+		}
+		return m, status.SetSuccess("Welcome! Config saved.", 0)
 
 	case NavigateMsg:
 		// Push current screen to stack and navigate to new screen
@@ -238,7 +289,11 @@ func (m rootModel) View() tea.View {
 		m.footerView(),
 	)
 
-	return tea.NewView(m.styles.App.Render(content))
+	base := m.styles.App.Render(content)
+	if m.modal.Visible() {
+		return tea.NewView(modal.Overlay(base, m.modal.View(), m.width, m.height))
+	}
+	return tea.NewView(base)
 }
 
 // renderBanner renders the ASCII art banner at its natural width and caches the result.
