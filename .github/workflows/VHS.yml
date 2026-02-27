@@ -1,0 +1,45 @@
+name: 📼 VHS
+on:
+  push:
+    paths:
+      - 'vhs.tape'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  generate-gifs:
+    name: Generate GIFs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+
+      - name: Install VHS and dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg ttyd
+          go install github.com/charmbracelet/vhs@latest
+
+      - name: Build scaffold binary
+        working-directory: scaffold
+        run: go build -o scfld .
+
+      - name: Generate GIFs
+        run: vhs vhs.tape
+
+      - name: Commit updated GIFs
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add *.gif
+          if git diff --cached --quiet; then
+            echo "No GIF changes to commit"
+          else
+            git commit -m "chore: regenerate VHS GIFs"
+            git push
+          fi
