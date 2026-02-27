@@ -185,7 +185,7 @@ func RandomFont() string {
 // GradientConfig controls gradient generation parameters.
 type GradientConfig struct {
 	Stops  int  // Number of color stops (default: 7)
-	UseHcl bool // Use HCL blending for perceptual uniformity (default: true)
+	UseLab bool // Use Lab blending instead of HCL (default: false, meaning HCL is used)
 }
 
 // GradientThemedWithConfig builds a gradient with configurable blending.
@@ -201,15 +201,19 @@ func GradientThemedWithConfig(primary, secondary color.Color, cfg GradientConfig
 		return &Gradient{Name: "themed", Colors: []string{"888888"}}
 	}
 
+	if cfg.Stops == 1 {
+		return &Gradient{Name: "themed", Colors: []string{p1.Hex()[1:]}}
+	}
+
 	hexes := make([]string, cfg.Stops)
 	for i := 0; i < cfg.Stops; i++ {
 		t := float64(i) / float64(cfg.Stops-1)
 
 		var blended colorful.Color
-		if cfg.UseHcl {
-			blended = p1.BlendHcl(p2, t).Clamped()
-		} else {
+		if cfg.UseLab {
 			blended = p1.BlendLab(p2, t).Clamped()
+		} else {
+			blended = p1.BlendHcl(p2, t).Clamped()
 		}
 		hexes[i] = blended.Hex()[1:] // strip '#'
 	}
@@ -222,10 +226,7 @@ func GradientThemedWithConfig(primary, secondary color.Color, cfg GradientConfig
 // Returns *Gradient so it can be assigned inline in banner.Config{Gradient: ...}.
 // Pass palette.Primary and palette.Secondary to derive a theme-matched gradient.
 func GradientThemed(primary, secondary color.Color) *Gradient {
-	return GradientThemedWithConfig(primary, secondary, GradientConfig{
-		Stops:  7,
-		UseHcl: true,
-	})
+	return GradientThemedWithConfig(primary, secondary, GradientConfig{Stops: 7})
 }
 
 // GenerateGradient creates a perceptually smooth gradient between two hex colors.
@@ -242,6 +243,10 @@ func GenerateGradient(name, startHex, endHex string, stops int) (Gradient, error
 
 	if stops <= 0 {
 		stops = 7
+	}
+
+	if stops == 1 {
+		return Gradient{Name: name, Colors: []string{start.Hex()[1:]}}, nil
 	}
 
 	colors := make([]string, stops)

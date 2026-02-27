@@ -19,11 +19,9 @@ import (
 
 // wrapHue normalizes hue to [0, 360) range.
 func wrapHue(h float64) float64 {
-	for h < 0 {
+	h = math.Mod(h, 360)
+	if h < 0 {
 		h += 360
-	}
-	for h >= 360 {
-		h -= 360
 	}
 	return h
 }
@@ -129,10 +127,15 @@ func GenerateVariants(base color.Color) []ColorVariant {
 // ValidatePalette checks that palette colors meet perceptual distance requirements.
 // Returns warnings for colors that are too similar (confusion risk).
 func ValidatePalette(p Palette) []string {
+	const (
+		minTextContrastDistance = 0.5
+		minStatusColorDistance  = 0.15
+	)
+
 	var warnings []string
 
 	// Check text contrast with primary
-	if dist := colorDistance(p.TextPrimary, p.Primary); dist < 0.5 {
+	if dist := colorDistance(p.TextPrimary, p.Primary); dist < minTextContrastDistance {
 		warnings = append(warnings, "TextPrimary may have insufficient contrast with Primary")
 	}
 
@@ -150,7 +153,7 @@ func ValidatePalette(p Palette) []string {
 	for i := 0; i < len(statusColors); i++ {
 		for j := i + 1; j < len(statusColors); j++ {
 			dist := colorDistance(statusColors[i].col, statusColors[j].col)
-			if dist < 0.15 {
+			if dist < minStatusColorDistance {
 				warnings = append(warnings, fmt.Sprintf(
 					"%s and %s are too similar (distance: %.2f)",
 					statusColors[i].name, statusColors[j].name, dist))
