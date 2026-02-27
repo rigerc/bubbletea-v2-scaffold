@@ -433,18 +433,18 @@ func NewDetailStylesFromPalette(p Palette) DetailStyles {
 
 // ModalStyles holds styles for modal dialogs.
 type ModalStyles struct {
-	Title   lipgloss.Style
-	Body    lipgloss.Style
-	Hint    lipgloss.Style
-	Dialog  lipgloss.Style
+	Title  lipgloss.Style
+	Body   lipgloss.Style
+	Hint   lipgloss.Style
+	Dialog lipgloss.Style
 }
 
 // newModalStylesFromPalette creates ModalStyles from a Palette.
 func newModalStylesFromPalette(p Palette) ModalStyles {
 	return ModalStyles{
-		Title:  lipgloss.NewStyle().Bold(true).Foreground(p.Primary),
-		Body:   lipgloss.NewStyle().Foreground(p.TextPrimary),
-		Hint:   lipgloss.NewStyle().Foreground(p.TextMuted).Italic(true),
+		Title: lipgloss.NewStyle().Bold(true).Foreground(p.Primary),
+		Body:  lipgloss.NewStyle().Foreground(p.TextPrimary),
+		Hint:  lipgloss.NewStyle().Foreground(p.TextMuted).Italic(true),
 		Dialog: lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
 			BorderForeground(p.Primary).
