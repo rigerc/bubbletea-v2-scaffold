@@ -14,5 +14,5 @@ Sleep 5
 
 Hide
 Ctrl+C
-Type "rm scaffold"
+Type "rm scaffold-tmp"
 Enter
