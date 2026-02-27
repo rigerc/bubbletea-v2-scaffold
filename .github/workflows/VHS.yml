@@ -39,6 +39,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No GIF changes to commit"
           else
-            git commit -m "chore: regenerate VHS GIFs"
+            git commit -m "chore: regenerate VHS GIFs [skip ci]"
             git push
           fi
