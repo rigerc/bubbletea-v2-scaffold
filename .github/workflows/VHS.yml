@@ -19,9 +19,6 @@ jobs:
         with:
           go-version: "1.24"
 
-      - name: Build binary
-        run: go build -ldflags "-X main.version=${{ github.ref_name }}" -o puzzletea
-
       - name: Install VHS and dependencies
         run: |
           sudo apt-get update
@@ -36,7 +33,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add vhs/*.gif
+          git add *.gif
           if git diff --cached --quiet; then
             echo "No GIF changes to commit"
           else
