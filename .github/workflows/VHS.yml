@@ -6,35 +6,40 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  vhs:
-    name: Create VHS
-    runs-on: macos-latest
-    permissions:
-      contents: write
+  generate-gifs:
+    name: Generate GIFs
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
         with:
-          ref: ${{ github.ref }}
+          go-version: "1.24"
 
+      - name: Build binary
+        run: go build -ldflags "-X main.version=${{ github.ref_name }}" -o puzzletea
 
-      - name: Record VHS
+      - name: Install VHS and dependencies
         run: |
-          brew install ttyd ffmpeg
-          go install github.com/charmbracelet/vhs@517bcda0faf416728bcf6b7fe489eb0e2469d9b5 # v0.10.0
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg ttyd
+          go install github.com/charmbracelet/vhs@latest
+
+      - name: Generate GIFs
+        run: |
           vhs vhs.tape
 
-      - name: Save recorded GIF
-        uses: stefanzweifel/git-auto-commit-action@04702edda442b2e678b25b537cec683a1493fcb9 # v7.1.0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          commit_message: 'docs: Update `wxt init` GIF'
-          commit_user_name: github-actions[bot]
-          commit_user_email: github-actions[bot]@users.noreply.github.com
-          commit_author: github-actions[bot] <github-actions[bot]@users.noreply.github.com>
-          # https://github.com/charmbracelet/vhs#output
-          file_pattern: '*.gif'
+      - name: Commit updated GIFs
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add vhs/*.gif
+          if git diff --cached --quiet; then
+            echo "No GIF changes to commit"
+          else
+            git commit -m "chore: regenerate VHS GIFs"
+            git push
+          fi
