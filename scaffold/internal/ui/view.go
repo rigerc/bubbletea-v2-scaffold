@@ -21,14 +21,14 @@ func (m *rootModel) renderBanner() {
 		p = theme.NewPalette(m.cfg.UI.ThemeName, state.IsDark)
 	}
 	b, err := banner.Render(banner.Config{
-		Text:          m.cfg.App.Title,
+		Text:          m.cfg.App.Name,
 		Font:          "larry3d",
 		Width:         100,
 		Justification: 0,
 		Gradient:      banner.GradientThemed(p.Primary, p.Secondary),
 	})
 	if err != nil {
-		b = m.cfg.App.Title
+		b = m.cfg.App.Name
 	}
 	m.banner = b
 }
@@ -46,7 +46,7 @@ func (m rootModel) headerView() string {
 
 // plainTitleView renders a styled plain-text title used when ShowBanner is off.
 func (m rootModel) plainTitleView() string {
-	return m.styles.PlainTitle.Render(m.cfg.App.Title)
+	return m.styles.PlainTitle.Render(m.cfg.App.Name)
 }
 
 // helpView renders the persistent help box showing global and screen-specific keybindings.

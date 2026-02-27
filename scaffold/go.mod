@@ -9,6 +9,7 @@ require (
 	charm.land/lipgloss/v2 v2.0.0
 	github.com/charmbracelet/x/exp/charmtone v0.0.0-20260225200202-61df8bc4b903
 	github.com/knadh/koanf/parsers/json v1.0.0
+	github.com/knadh/koanf/providers/confmap v0.1.0
 	github.com/knadh/koanf/providers/file v1.2.1
 	github.com/knadh/koanf/providers/rawbytes v1.0.0
 	github.com/knadh/koanf/v2 v2.1.2

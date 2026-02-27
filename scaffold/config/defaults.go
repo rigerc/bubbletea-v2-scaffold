@@ -15,9 +15,9 @@ func DefaultConfig() *Config {
 			ShowBanner:   true,
 		},
 		App: AppConfig{
-			Name:    "scaffold",
-			Version: "1.0.0",
-			Title:   "Scaffold",
+			Name:        "scaffold",
+			Description: "A scaffold application",
+			Version:     "1.0.0",
 		},
 	}
 }

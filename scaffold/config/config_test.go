@@ -50,6 +50,53 @@ func TestLoad_RoundTrip(t *testing.T) {
 	assert.Equal(t, original.Debug, loaded.Debug)
 }
 
+// TestLoad_MissingFieldsGetDefaults verifies that old config files (missing new fields)
+// get default values for those fields instead of zero values.
+func TestLoad_MissingFieldsGetDefaults(t *testing.T) {
+	// Simulate an old config that only has logLevel (missing ui, app, debug, etc.)
+	path := writeJSON(t, `{"logLevel":"debug"}`)
+
+	cfg, err := Load(path)
+	require.NoError(t, err)
+
+	// Explicitly set value preserved
+	assert.Equal(t, "debug", cfg.LogLevel)
+
+	// Missing fields get defaults (not zero values)
+	defaults := DefaultConfig()
+	assert.Equal(t, defaults.Debug, cfg.Debug, "missing debug should get default")
+	assert.Equal(t, defaults.UI.MouseEnabled, cfg.UI.MouseEnabled, "missing ui.mouseEnabled should get default")
+	assert.Equal(t, defaults.UI.ThemeName, cfg.UI.ThemeName, "missing ui.themeName should get default")
+	assert.Equal(t, defaults.UI.ShowBanner, cfg.UI.ShowBanner, "missing ui.showBanner should get default")
+	assert.Equal(t, defaults.App.Name, cfg.App.Name, "missing app.name should get default")
+	assert.Equal(t, defaults.App.Version, cfg.App.Version, "missing app.version should get default")
+	assert.Equal(t, defaults.App.Description, cfg.App.Description, "missing app.description should get default")
+}
+
+// TestLoad_UserValuesOverrideDefaults verifies that user-specified values
+// override the defaults.
+func TestLoad_UserValuesOverrideDefaults(t *testing.T) {
+	path := writeJSON(t, `{
+		"logLevel": "warn",
+		"debug": true,
+		"ui": {
+			"mouseEnabled": false,
+			"themeName": "nightfly",
+			"showBanner": false
+		}
+	}`)
+
+	cfg, err := Load(path)
+	require.NoError(t, err)
+
+	// User values override defaults
+	assert.Equal(t, "warn", cfg.LogLevel)
+	assert.True(t, cfg.Debug)
+	assert.False(t, cfg.UI.MouseEnabled)
+	assert.Equal(t, "nightfly", cfg.UI.ThemeName)
+	assert.False(t, cfg.UI.ShowBanner)
+}
+
 // --- LoadFromBytes ---
 
 func TestLoadFromBytes_ValidJSON(t *testing.T) {
@@ -63,6 +110,35 @@ func TestLoadFromBytes_ValidatesConfig(t *testing.T) {
 	_, err := LoadFromBytes([]byte(`{"logLevel":"invalid","configVersion":1}`))
 	assert.ErrorIs(t, err, ErrInvalidConfig,
 		"LoadFromBytes should reject an invalid logLevel")
+}
+
+// TestLoadFromBytes_MissingFieldsGetDefaults verifies that partial configs
+// get default values for missing fields.
+func TestLoadFromBytes_MissingFieldsGetDefaults(t *testing.T) {
+	// Partial config with only logLevel
+	cfg, err := LoadFromBytes([]byte(`{"logLevel":"debug"}`))
+	require.NoError(t, err)
+
+	// Explicitly set value preserved
+	assert.Equal(t, "debug", cfg.LogLevel)
+
+	// Missing fields get defaults (not zero values)
+	defaults := DefaultConfig()
+	assert.Equal(t, defaults.Debug, cfg.Debug, "missing debug should get default")
+	assert.Equal(t, defaults.UI.ThemeName, cfg.UI.ThemeName, "missing ui.themeName should get default")
+}
+
+// TestLoadFromBytes_UserValuesOverrideDefaults verifies that user-specified values
+// override the defaults.
+func TestLoadFromBytes_UserValuesOverrideDefaults(t *testing.T) {
+	cfg, err := LoadFromBytes([]byte(`{
+		"logLevel": "error",
+		"ui": {"themeName": "catppuccin"}
+	}`))
+	require.NoError(t, err)
+
+	assert.Equal(t, "error", cfg.LogLevel)
+	assert.Equal(t, "catppuccin", cfg.UI.ThemeName)
 }
 
 // --- DefaultConfig ---

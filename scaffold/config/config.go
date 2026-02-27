@@ -9,6 +9,7 @@ import (
 	"os"
 
 	koanfjson "github.com/knadh/koanf/parsers/json"
+	"github.com/knadh/koanf/providers/confmap"
 	"github.com/knadh/koanf/providers/file"
 	"github.com/knadh/koanf/providers/rawbytes"
 	"github.com/knadh/koanf/v2"
@@ -66,19 +67,19 @@ type AppConfig struct {
 	// Name is the application name.
 	Name string `json:"name" mapstructure:"name" koanf:"name" cfg_label:"App Name" cfg_desc:"Displayed in the banner"`
 
+	// Description is the application description.
+	Description string `json:"description" mapstructure:"description" koanf:"description" cfg_label:"App Description" cfg_desc:"Displayed in the banner"`
+
 	// Version is the application version.
 	Version string `json:"version" mapstructure:"version" koanf:"version" cfg_label:"Version" cfg_readonly:"true"`
-
-	// Title is the default window title.
-	Title string `json:"title" mapstructure:"title" koanf:"title" cfg_label:"Window Title" cfg_desc:"Default title bar text"`
 }
 
 // Load reads configuration from the specified file path.
 // If the file does not exist, it returns ErrConfigNotFound.
 // If the file exists but cannot be parsed, it returns an error.
+// Defaults are loaded first, then user config merges on top - this ensures
+// new fields added to Config get their default values when user has old config files.
 func Load(path string) (*Config, error) {
-	cfg := &Config{}
-
 	// Check if file exists
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		return nil, ErrConfigNotFound
@@ -87,12 +88,33 @@ func Load(path string) (*Config, error) {
 	// Create koanf instance
 	k := koanf.New(".")
 
-	// Load from file
+	// 1. Load defaults first
+	defaults := DefaultConfig()
+	if err := k.Load(confmap.Provider(map[string]any{
+		"configVersion": defaults.ConfigVersion,
+		"logLevel":      defaults.LogLevel,
+		"debug":         defaults.Debug,
+		"ui": map[string]any{
+			"mouseEnabled": defaults.UI.MouseEnabled,
+			"themeName":    defaults.UI.ThemeName,
+			"showBanner":   defaults.UI.ShowBanner,
+		},
+		"app": map[string]any{
+			"name":        defaults.App.Name,
+			"description": defaults.App.Description,
+			"version":     defaults.App.Version,
+		},
+	}, "."), nil); err != nil {
+		return nil, fmt.Errorf("loading defaults: %w", err)
+	}
+
+	// 2. Load user config (merges, overrides defaults for set fields)
 	if err := k.Load(file.Provider(path), koanfjson.Parser()); err != nil {
 		return nil, fmt.Errorf("loading config from %s: %w", path, err)
 	}
 
-	// Unmarshal into config struct
+	// 3. Unmarshal merged result
+	cfg := &Config{}
 	if err := k.Unmarshal("", cfg); err != nil {
 		return nil, fmt.Errorf("parsing configuration: %w", err)
 	}
@@ -107,18 +129,39 @@ func Load(path string) (*Config, error) {
 
 // LoadFromBytes loads configuration from a byte slice.
 // This is useful for loading embedded default configurations.
+// Defaults are loaded first, then provided config merges on top - this ensures
+// new fields added to Config get their default values when loading partial configs.
 func LoadFromBytes(data []byte) (*Config, error) {
-	cfg := &Config{}
-
 	// Create koanf instance
 	k := koanf.New(".")
 
-	// Load from bytes
+	// 1. Load defaults first
+	defaults := DefaultConfig()
+	if err := k.Load(confmap.Provider(map[string]any{
+		"configVersion": defaults.ConfigVersion,
+		"logLevel":      defaults.LogLevel,
+		"debug":         defaults.Debug,
+		"ui": map[string]any{
+			"mouseEnabled": defaults.UI.MouseEnabled,
+			"themeName":    defaults.UI.ThemeName,
+			"showBanner":   defaults.UI.ShowBanner,
+		},
+		"app": map[string]any{
+			"name":        defaults.App.Name,
+			"description": defaults.App.Description,
+			"version":     defaults.App.Version,
+		},
+	}, "."), nil); err != nil {
+		return nil, fmt.Errorf("loading defaults: %w", err)
+	}
+
+	// 2. Load from bytes (merges, overrides defaults for set fields)
 	if err := k.Load(rawbytes.Provider(data), koanfjson.Parser()); err != nil {
 		return nil, fmt.Errorf("loading config from bytes: %w", err)
 	}
 
-	// Unmarshal into config struct
+	// 3. Unmarshal merged result
+	cfg := &Config{}
 	if err := k.Unmarshal("", cfg); err != nil {
 		return nil, fmt.Errorf("parsing configuration: %w", err)
 	}
