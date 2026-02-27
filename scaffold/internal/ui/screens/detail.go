@@ -1,30 +1,41 @@
 package screens
 
 import (
+	"context"
 	"fmt"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
+	"scaffold/internal/task"
+	"scaffold/internal/ui/spinner"
 	"scaffold/internal/ui/theme"
 )
 
 // Detail is a detail screen that shows information about a selected menu item.
+// It demonstrates the async task + spinner pattern: content is "loaded" via
+// task.RunWithTimeout, with a spinner displayed while the task runs.
 type Detail struct {
 	theme.ThemeAware
 
+	ctx         context.Context
 	title       string
 	description string
 	screenID    string
 	width       int
+	load        spinner.Loading
 }
 
-// NewDetail creates a new Detail screen.
-func NewDetail(title, description, screenID string) *Detail {
+// NewDetail creates a new Detail screen. ctx is used to cancel the load task
+// if the user navigates away or quits before it completes.
+func NewDetail(title, description, screenID string, ctx context.Context) *Detail {
 	return &Detail{
+		ctx:         ctx,
 		title:       title,
 		description: description,
 		screenID:    screenID,
+		load:        spinner.NewLoading(theme.Palette{}),
 	}
 }
 
@@ -37,16 +48,49 @@ func (d *Detail) SetWidth(w int) Screen {
 // ApplyTheme implements theme.Themeable.
 func (d *Detail) ApplyTheme(state theme.State) {
 	d.ApplyThemeState(state)
-	// Styles built in View() from Palette()
+	d.load.ApplyPalette(state.Palette)
 }
 
-// Init initializes the detail screen.
+// Init starts the simulated background load and the spinner tick loop.
 func (d *Detail) Init() tea.Cmd {
-	return nil
+	return tea.Batch(
+		d.load.Start(),
+		task.RunWithTimeout(d.ctx, "detail-load", 1500*time.Millisecond,
+			func(ctx context.Context) (string, error) {
+				select {
+				case <-ctx.Done():
+					return "", ctx.Err()
+				case <-time.After(1500 * time.Millisecond):
+					return "loaded", nil
+				}
+			},
+		),
+	)
 }
 
 // Update handles messages for the detail screen.
 func (d *Detail) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	// Resolve task results first so we catch them even if loading changes state.
+	switch msg := msg.(type) {
+	case task.DoneMsg[string]:
+		if msg.Label == "detail-load" {
+			d.load.Stop()
+			return d, nil
+		}
+	case task.ErrMsg:
+		if msg.Label == "detail-load" {
+			d.load.Stop()
+			return d, nil
+		}
+	}
+
+	// While loading, advance the spinner on every message.
+	if d.load.Active() {
+		var cmd tea.Cmd
+		d.load, cmd = d.load.Update(msg)
+		return d, cmd
+	}
+
 	if keyMsg, ok := msg.(tea.KeyPressMsg); ok {
 		switch keyMsg.String() {
 		case "esc":
@@ -63,6 +107,10 @@ func (d *Detail) View() tea.View {
 
 // Body returns the body content for layout composition.
 func (d *Detail) Body() string {
+	if d.load.Active() {
+		return d.load.View("Loading…", d.Palette())
+	}
+
 	p := d.Palette()
 
 	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(p.Primary).MarginBottom(1)

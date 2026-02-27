@@ -12,6 +12,7 @@ import (
 	"charm.land/lipgloss/v2"
 
 	"scaffold/config"
+	"scaffold/internal/ui/modal"
 	"scaffold/internal/ui/theme"
 )
 
@@ -35,6 +36,7 @@ type settingsKeyMap struct {
 	Submit key.Binding
 	Left   key.Binding
 	Right  key.Binding
+	Reset  key.Binding
 }
 
 func defaultSettingsKeyMap() settingsKeyMap {
@@ -58,6 +60,10 @@ func defaultSettingsKeyMap() settingsKeyMap {
 		Right: key.NewBinding(
 			key.WithKeys("l"),
 			key.WithHelp("l", "next group"),
+		),
+		Reset: key.NewBinding(
+			key.WithKeys("r"),
+			key.WithHelp("r", "reset defaults"),
 		),
 	}
 }
@@ -159,10 +165,24 @@ func (s *Settings) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 
-	// Handle page navigation with left/right keys
+	// Handle modal response: confirmed reset → dispatch SettingsSavedMsg with defaults.
+	if confirmed, ok := msg.(modal.ConfirmedMsg); ok {
+		if confirmed.ID == "reset-settings" {
+			defaults := config.DefaultConfig()
+			return s, func() tea.Msg { return SettingsSavedMsg{Cfg: *defaults} }
+		}
+	}
+
+	// Handle page navigation and reset with left/right/r keys
 	if s.form.State == huh.StateNormal {
 		if keyMsg, ok := msg.(tea.KeyPressMsg); ok {
 			switch {
+			case key.Matches(keyMsg, s.keys.Reset):
+				return s, modal.ShowConfirm(
+					"reset-settings",
+					"Reset Settings",
+					"Restore all defaults and save? This cannot be undone.",
+				)
 			case key.Matches(keyMsg, s.keys.Left):
 				if !s.paginator.OnFirstPage() {
 					s.paginator.PrevPage()
@@ -242,12 +262,12 @@ func (s *Settings) rebuildFormForCurrentPage() tea.Cmd {
 
 // ShortHelp returns short help key bindings for the global help bar.
 func (s *Settings) ShortHelp() []key.Binding {
-	return []key.Binding{s.keys.Left, s.keys.Right, s.keys.Submit}
+	return []key.Binding{s.keys.Left, s.keys.Right, s.keys.Submit, s.keys.Reset}
 }
 
 // FullHelp returns full help key bindings for the global help bar.
 func (s *Settings) FullHelp() [][]key.Binding {
-	return [][]key.Binding{{s.keys.Left, s.keys.Right, s.keys.Submit}}
+	return [][]key.Binding{{s.keys.Left, s.keys.Right, s.keys.Submit, s.keys.Reset}}
 }
 
 // buildFormForGroup constructs a huh.Form for a single group.

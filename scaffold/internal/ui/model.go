@@ -211,7 +211,7 @@ func (m rootModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.Update(NavigateMsg{Screen: screens.NewSettings(m.cfg)})
 		default:
 			detail := screens.NewDetail(
-				msg.Item.Title(), msg.Item.Description(), msg.Item.ScreenID(),
+				msg.Item.Title(), msg.Item.Description(), msg.Item.ScreenID(), m.ctx,
 			)
 			return m.Update(NavigateMsg{Screen: detail})
 		}

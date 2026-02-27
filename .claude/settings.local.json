@@ -22,7 +22,8 @@
       "Skill(bubbletea-v2)",
       "Skill(huh-v2)",
       "Skill(koanf)",
-      "Bash(gh pr:*)"
+      "Bash(gh pr:*)",
+      "Bash(node:*)"
     ]
   }
 }
