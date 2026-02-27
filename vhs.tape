@@ -2,14 +2,14 @@ Output scaffold.gif
 Set FontSize 14
 
 Hide
-Type "go build -o scaffold-tmp ./scaffold/..."
+Type "cd scaffold"
 Enter
 Type "clear"
 Enter
+Type "go run ."
+Enter
 Show
 
-Type "./scaffold-tmp"
-Enter
 Sleep 5
 
 Hide
