@@ -415,15 +415,47 @@ type DetailStyles struct {
 func newDetailStylesFromPalette(p Palette) DetailStyles {
 	return DetailStyles{
 		Title:   lipgloss.NewStyle().Bold(true).Foreground(p.Primary).MarginBottom(1),
-		Desc:    lipgloss.NewStyle().Foreground(p.TextMuted).MarginBottom(2),
+		Desc:    lipgloss.NewStyle().Foreground(p.SubtleSecondary).MarginBottom(2),
 		Content: lipgloss.NewStyle().Foreground(p.TextPrimary),
-		Info:    lipgloss.NewStyle().Foreground(p.TextSecondary).Italic(true),
+		Info:    lipgloss.NewStyle().Foreground(p.Primary).Italic(true).MarginBottom(1),
 	}
 }
 
 // NewDetailStyles creates detail styles with adaptive colors for the given theme name.
 func NewDetailStyles(name string, isDark bool) DetailStyles {
 	return newDetailStylesFromPalette(NewPalette(name, isDark))
+}
+
+// NewDetailStylesFromPalette creates DetailStyles from an existing Palette.
+func NewDetailStylesFromPalette(p Palette) DetailStyles {
+	return newDetailStylesFromPalette(p)
+}
+
+// ModalStyles holds styles for modal dialogs.
+type ModalStyles struct {
+	Title   lipgloss.Style
+	Body    lipgloss.Style
+	Hint    lipgloss.Style
+	Dialog  lipgloss.Style
+}
+
+// newModalStylesFromPalette creates ModalStyles from a Palette.
+func newModalStylesFromPalette(p Palette) ModalStyles {
+	return ModalStyles{
+		Title:  lipgloss.NewStyle().Bold(true).Foreground(p.Primary),
+		Body:   lipgloss.NewStyle().Foreground(p.TextPrimary),
+		Hint:   lipgloss.NewStyle().Foreground(p.TextMuted).Italic(true),
+		Dialog: lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(p.Primary).
+			Padding(1, 2).
+			Width(52),
+	}
+}
+
+// NewModalStylesFromPalette creates ModalStyles from an existing Palette.
+func NewModalStylesFromPalette(p Palette) ModalStyles {
+	return newModalStylesFromPalette(p)
 }
 
 // StatusStyles provides pre-built styles for status messages.

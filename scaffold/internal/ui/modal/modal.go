@@ -46,7 +46,7 @@ type Model struct {
 	input   textinput.Model
 	visible bool
 	keys    keyMap
-	palette theme.Palette
+	styles  theme.ModalStyles
 }
 
 // New creates a visible modal from a ShowMsg.
@@ -58,7 +58,7 @@ func New(msg ShowMsg, p theme.Palette) Model {
 		body:    msg.Body,
 		visible: true,
 		keys:    defaultKeyMap(),
-		palette: p,
+		styles:  theme.NewModalStylesFromPalette(p),
 	}
 	if msg.Kind == KindPrompt {
 		ti := textinput.New()
@@ -119,39 +119,27 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 
 // View renders the dialog box.
 func (m Model) View() string {
-	p := m.palette
-
-	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(p.Primary)
-	bodyStyle := lipgloss.NewStyle().Foreground(p.TextPrimary)
-	hintStyle := lipgloss.NewStyle().Foreground(p.TextMuted).Italic(true)
-
 	var rows []string
-	rows = append(rows, titleStyle.Render(m.title))
+	rows = append(rows, m.styles.Title.Render(m.title))
 	if m.body != "" {
 		rows = append(rows, "")
-		rows = append(rows, bodyStyle.Render(m.body))
+		rows = append(rows, m.styles.Body.Render(m.body))
 	}
 	rows = append(rows, "")
 
 	switch m.kind {
 	case KindConfirm:
-		rows = append(rows, hintStyle.Render("[y] Yes   [n] No"))
+		rows = append(rows, m.styles.Hint.Render("[y] Yes   [n] No"))
 	case KindAlert:
-		rows = append(rows, hintStyle.Render("[enter] OK"))
+		rows = append(rows, m.styles.Hint.Render("[enter] OK"))
 	case KindPrompt:
 		rows = append(rows, m.input.View())
 		rows = append(rows, "")
-		rows = append(rows, hintStyle.Render("[enter] Submit   [esc] Cancel"))
+		rows = append(rows, m.styles.Hint.Render("[enter] Submit   [esc] Cancel"))
 	}
 
 	inner := lipgloss.JoinVertical(lipgloss.Left, rows...)
-
-	return lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(p.Primary).
-		Padding(1, 2).
-		Width(52).
-		Render(inner)
+	return m.styles.Dialog.Render(inner)
 }
 
 // ShowConfirm returns a Cmd that triggers a confirm (Yes/No) modal.

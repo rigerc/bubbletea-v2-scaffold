@@ -27,6 +27,7 @@ type Detail struct {
 	width       int
 	load        spinner.Loading
 	elapsed     int // seconds elapsed since loading started
+	styles      theme.DetailStyles
 }
 
 // NewDetail creates a new Detail screen. ctx is used to cancel the load task
@@ -51,6 +52,7 @@ func (d *Detail) SetWidth(w int) Screen {
 func (d *Detail) ApplyTheme(state theme.State) {
 	d.ApplyThemeState(state)
 	d.load.ApplyPalette(state.Palette)
+	d.styles = theme.NewDetailStylesFromPalette(state.Palette)
 }
 
 // tickCmd returns a command that fires detailTickMsg after one second,
@@ -131,19 +133,12 @@ func (d *Detail) Body() string {
 		return d.load.View(label, d.Palette())
 	}
 
-	p := d.Palette()
-
-	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(p.Primary).MarginBottom(1)
-	descStyle := lipgloss.NewStyle().Foreground(p.TextMuted).MarginBottom(2)
-	contentStyle := lipgloss.NewStyle().Foreground(p.TextPrimary)
-	infoStyle := lipgloss.NewStyle().Foreground(p.TextSecondary).Italic(true)
-
 	content := lipgloss.JoinVertical(lipgloss.Left,
-		titleStyle.Render(d.title),
-		descStyle.Render(d.description),
-		contentStyle.Render(fmt.Sprintf("Screen ID: %s", d.screenID)),
+		d.styles.Title.Render(d.title),
+		d.styles.Desc.Render(d.description),
+		d.styles.Content.Render(fmt.Sprintf("Screen ID: %s", d.screenID)),
 		"",
-		infoStyle.Render("Press Esc to go back to the menu"),
+		d.styles.Info.Render("Press Esc to go back to the menu"),
 	)
 
 	return content
