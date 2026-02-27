@@ -1,8 +1,7 @@
 name: 📼 VHS
 on:
   push:
-    paths:
-      - 'vhs.tape'
+    paths: 'vhs.tape'
   workflow_dispatch:
 
 permissions:
