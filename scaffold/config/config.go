@@ -123,6 +123,11 @@ func LoadFromBytes(data []byte) (*Config, error) {
 		return nil, fmt.Errorf("parsing configuration: %w", err)
 	}
 
+	// Validate configuration
+	if err := cfg.Validate(); err != nil {
+		return nil, err
+	}
+
 	return cfg, nil
 }
 

@@ -3,14 +3,24 @@ Set FontSize 14
 
 Type "scaffold/scfld"
 Enter
-Sleep 2
-Down 2
+Sleep 5
+Down
 Enter
+Sleep 1
 Type "l"
 Sleep 1
 Escape
-Down 3
+Sleep 2
+Down
+Down
 Enter
-Sleep 3
+Sleep 5
+Escape
+Sleep 2
+Down
+Down
+Down
+Enter
+Sleep 5
 Escape
 Sleep 3

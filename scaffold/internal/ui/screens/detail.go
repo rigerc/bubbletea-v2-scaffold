@@ -16,6 +16,7 @@ import (
 // Detail is a detail screen that shows information about a selected menu item.
 // It demonstrates the async task + spinner pattern: content is "loaded" via
 // task.RunWithTimeout, with a spinner displayed while the task runs.
+// A tea.Tick command (§7C) counts elapsed seconds during loading.
 type Detail struct {
 	theme.ThemeAware
 
@@ -25,6 +26,7 @@ type Detail struct {
 	screenID    string
 	width       int
 	load        spinner.Loading
+	elapsed     int // seconds elapsed since loading started
 }
 
 // NewDetail creates a new Detail screen. ctx is used to cancel the load task
@@ -51,10 +53,20 @@ func (d *Detail) ApplyTheme(state theme.State) {
 	d.load.ApplyPalette(state.Palette)
 }
 
-// Init starts the simulated background load and the spinner tick loop.
+// tickCmd returns a command that fires detailTickMsg after one second,
+// demonstrating the canonical periodic-task pattern with tea.Tick.
+func tickCmd() tea.Cmd {
+	return tea.Tick(time.Second, func(t time.Time) tea.Msg {
+		return detailTickMsg(t)
+	})
+}
+
+// Init starts the simulated background load, the spinner tick loop, and the
+// elapsed-time ticker that counts seconds while loading is active.
 func (d *Detail) Init() tea.Cmd {
 	return tea.Batch(
 		d.load.Start(),
+		tickCmd(),
 		task.RunWithTimeout(d.ctx, "detail-load", 1500*time.Millisecond,
 			func(ctx context.Context) (string, error) {
 				select {
@@ -82,6 +94,13 @@ func (d *Detail) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			d.load.Stop()
 			return d, nil
 		}
+	case detailTickMsg:
+		// Advance elapsed counter and reschedule while loading is active.
+		if d.load.Active() {
+			d.elapsed++
+			return d, tickCmd()
+		}
+		return d, nil
 	}
 
 	// While loading, advance the spinner on every message.
@@ -108,7 +127,8 @@ func (d *Detail) View() tea.View {
 // Body returns the body content for layout composition.
 func (d *Detail) Body() string {
 	if d.load.Active() {
-		return d.load.View("Loading…", d.Palette())
+		label := fmt.Sprintf("Loading… %ds", d.elapsed)
+		return d.load.View(label, d.Palette())
 	}
 
 	p := d.Palette()

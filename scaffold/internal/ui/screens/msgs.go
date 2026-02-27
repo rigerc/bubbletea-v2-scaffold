@@ -1,6 +1,10 @@
 package screens
 
-import "scaffold/config"
+import (
+	"time"
+
+	"scaffold/config"
+)
 
 // BackMsg signals that the current screen wants to go back.
 type BackMsg struct{}
@@ -9,3 +13,7 @@ type BackMsg struct{}
 type SettingsSavedMsg struct {
 	Cfg config.Config
 }
+
+// detailTickMsg is sent every second while the detail screen is loading,
+// demonstrating the canonical tea.Tick periodic-task pattern (§7C).
+type detailTickMsg time.Time

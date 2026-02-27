@@ -8,7 +8,7 @@ func DefaultConfig() *Config {
 	return &Config{
 		ConfigVersion: CurrentConfigVersion,
 		LogLevel:      "info",
-		Debug:    true,
+		Debug:    false,
 		UI: UIConfig{
 			MouseEnabled: true,
 			ThemeName:    "ember",
