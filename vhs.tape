@@ -4,15 +4,11 @@ Set FontSize 14
 Hide
 Type "cd scaffold"
 Enter
+Type "go build . -o scfld"
+Enter
 Type "clear"
 Enter
-Type "go run ."
-Enter
 Show
-
-Sleep 5
-
-Hide
-Ctrl+C
-Type "rm scaffold-tmp"
+Type "scfld"
 Enter
+Sleep 10
