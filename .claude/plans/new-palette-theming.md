@@ -95,10 +95,10 @@ func withAlpha(c color.Color, alpha float64) color.Color {
     if !ok {
         return c
     }
-    h, _, l := cf.Hcl()
+    h, chroma, l := cf.Hcl()
     // Simulate alpha by reducing chroma and blending toward lightness 0.5
-    newC := cf.C * alpha
-    newL := l + (0.5 - l) * (1 - alpha)
+    newC := chroma * alpha
+    newL := l + (0.5-l)*(1-alpha)
     return colorful.Hcl(h, newC, newL).Clamped()
 }
 
@@ -110,9 +110,10 @@ func contrastingForeground(bg color.Color) color.Color {
     if !ok {
         return lipgloss.Color("#201F26") // default dark
     }
-    // Use YIQ luminance for readability
+    // Use YIQ luminance for readability.
+    // colorful.Color stores R,G,B as float64 in [0,1], so yiq is in [0,1]; threshold is 0.5.
     yiq := (cf.R*299 + cf.G*587 + cf.B*114) / 1000
-    if yiq >= 128 {
+    if yiq >= 0.5 {
         return lipgloss.Color("#201F26") // dark text on light bg
     }
     return lipgloss.Color("#F1EFEF") // light text on dark bg
@@ -124,10 +125,9 @@ func lightenPercent(c color.Color, percent float64) color.Color {
     if !ok {
         return c
     }
-    _, _, l := cf.Hcl()
-    newL := math.Min(1, l + percent)
-    _, cVal, _ := cf.Hcl()
-    return colorful.Hcl(cf.H, cVal, newL).Clamped()
+    h, chroma, l := cf.Hcl()
+    newL := math.Max(0, math.Min(1, l+percent))
+    return colorful.Hcl(h, chroma, newL).Clamped()
 }
 
 // darkenPercent darkens by percentage (0-1 range).
@@ -302,7 +302,7 @@ func NewPalette(name string, isDark bool) Palette {
 }
 ```
 
-### Step 6: Update Theme Registry (All 10 Themes)
+### Step 6: Update Theme Registry (All 11 Themes)
 
 **File:** `scaffold/internal/ui/theme/theme.go` (lines 300-383)
 
@@ -520,7 +520,10 @@ func ValidatePalette(p Palette) []string {
 - Add `.Background(p.Background)` to App style
 - Add `.Background(p.Surface)` to Header style
 - `p.TextPrimary` → `p.Foreground`
-- `p.TextMuted` → `p.BorderMuted`
+- Footer `.BorderForeground(p.TextMuted)` → `p.Border`
+- StatusRight `.Foreground(p.TextMuted)` → `p.ForegroundSubtle`
+- StatusLeft `.Background(p.SubtlePrimary)` → `p.PrimaryMuted`
+- StatusLeft `.Foreground(p.TextInverse)` → `p.OnPrimary`
 - `p.SubtlePrimary` → `p.PrimaryMuted`
 - `p.TextInverse` → `p.OnPrimary`
 
@@ -534,14 +537,14 @@ func ValidatePalette(p Palette) []string {
 - Add `.Background(p.SurfaceRaised)` to Dialog style
 
 **`ListStyles()` (lines 515-534):**
-- Remove `p.PrimaryHover` usage
+- Title `.Background(p.PrimaryHover)` → `p.Primary`
+- Title `.Foreground(p.TextInverse)` → `p.OnPrimary`
 - `p.TextSecondary` → `p.ForegroundMuted`
 - `p.TextMuted` → `p.ForegroundSubtle`
-- Keep `p.Primary` for key elements
 
 **`ListItemStyles()` (lines 537-558):**
+- SelectedTitle `.Foreground(p.PrimaryHover)` → `p.Primary`
 - `p.TextMuted` → `p.ForegroundSubtle`
-- Remove `p.PrimaryHover` usage
 - `p.SubtleSecondary` → `p.SecondaryMuted`
 
 ### Step 9: Update `HuhTheme()` Function

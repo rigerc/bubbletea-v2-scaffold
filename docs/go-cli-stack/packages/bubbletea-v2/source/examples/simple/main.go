@@ -1,7 +1,5 @@
 package main
 
-// A simple program that counts down from 5 and then exits.
-
 import (
 	"fmt"
 	"log"
