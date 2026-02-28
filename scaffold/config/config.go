@@ -45,6 +45,15 @@ type Config struct {
 	// UI contains user interface specific configuration.
 	UI UIConfig `json:"ui" mapstructure:"ui" koanf:"ui" cfg_label:"UI Settings"`
 
+	// Editor contains editor-related configuration.
+	Editor EditorConfig `json:"editor" mapstructure:"editor" koanf:"editor" cfg_label:"Editor"`
+
+	// Network contains network-related configuration.
+	Network NetworkConfig `json:"network" mapstructure:"network" koanf:"network" cfg_label:"Network"`
+
+	// Notifications contains notification preferences.
+	Notifications NotificationsConfig `json:"notifications" mapstructure:"notifications" koanf:"notifications" cfg_label:"Notifications"`
+
 	// App contains general application configuration.
 	App AppConfig `json:"app" mapstructure:"app" koanf:"app" cfg_label:"Application" cfg_exclude:"true"`
 }
@@ -69,6 +78,75 @@ type UIConfig struct {
 	// ShowBanner controls whether the ASCII art banner is shown in the header.
 	// When false, a styled plain-text title is rendered instead.
 	ShowBanner bool `json:"showBanner" mapstructure:"showBanner" koanf:"showBanner" cfg_label:"ASCII Banner" cfg_desc:"Show ASCII art banner in header"`
+
+	// AnimationSpeed controls the speed of UI animations.
+	AnimationSpeed string `json:"animationSpeed" mapstructure:"animationSpeed" koanf:"animationSpeed" cfg_label:"Animation Speed" cfg_desc:"Speed of transitions and animations" cfg_options:"slow,normal,fast,none"`
+
+	// ShowHelpBar controls whether the persistent help bar is shown.
+	ShowHelpBar bool `json:"showHelpBar" mapstructure:"showHelpBar" koanf:"showHelpBar" cfg_label:"Show Help Bar" cfg_desc:"Display keybinding hints at the bottom"`
+
+	// Language sets the interface language.
+	Language string `json:"language" mapstructure:"language" koanf:"language" cfg_label:"Language" cfg_desc:"Interface language" cfg_options:"en,es,fr,de,ja,zh"`
+}
+
+// EditorConfig contains editor-related configuration.
+type EditorConfig struct {
+	// EditorCommand is the command to launch the external editor.
+	EditorCommand string `json:"editorCommand" mapstructure:"editorCommand" koanf:"editorCommand" cfg_label:"Editor Command" cfg_desc:"External editor command (e.g., vim, nano, code)"`
+
+	// TabWidth is the number of spaces per tab.
+	TabWidth int `json:"tabWidth" mapstructure:"tabWidth" koanf:"tabWidth" cfg_label:"Tab Width" cfg_desc:"Number of spaces per tab stop"`
+
+	// ExpandTabs converts tabs to spaces.
+	ExpandTabs bool `json:"expandTabs" mapstructure:"expandTabs" koanf:"expandTabs" cfg_label:"Expand Tabs" cfg_desc:"Convert tabs to spaces"`
+
+	// AutoSave enables automatic saving of changes.
+	AutoSave bool `json:"autoSave" mapstructure:"autoSave" koanf:"autoSave" cfg_label:"Auto Save" cfg_desc:"Automatically save changes"`
+
+	// AutoSaveInterval is the interval in seconds between auto-saves.
+	AutoSaveInterval int `json:"autoSaveInterval" mapstructure:"autoSaveInterval" koanf:"autoSaveInterval" cfg_label:"Auto Save Interval" cfg_desc:"Seconds between auto-saves (if enabled)"`
+
+	// ShowLineNumbers displays line numbers in editors.
+	ShowLineNumbers bool `json:"showLineNumbers" mapstructure:"showLineNumbers" koanf:"showLineNumbers" cfg_label:"Line Numbers" cfg_desc:"Show line numbers in text editors"`
+}
+
+// NetworkConfig contains network-related configuration.
+type NetworkConfig struct {
+	// APIEndpoint is the base URL for API requests.
+	APIEndpoint string `json:"apiEndpoint" mapstructure:"apiEndpoint" koanf:"apiEndpoint" cfg_label:"API Endpoint" cfg_desc:"Base URL for API requests"`
+
+	// Timeout is the request timeout in seconds.
+	Timeout int `json:"timeout" mapstructure:"timeout" koanf:"timeout" cfg_label:"Request Timeout" cfg_desc:"HTTP request timeout in seconds"`
+
+	// RetryCount is the number of times to retry failed requests.
+	RetryCount int `json:"retryCount" mapstructure:"retryCount" koanf:"retryCount" cfg_label:"Retry Count" cfg_desc:"Number of retry attempts for failed requests"`
+
+	// ProxyURL is the HTTP proxy URL (optional).
+	ProxyURL string `json:"proxyUrl" mapstructure:"proxyUrl" koanf:"proxyUrl" cfg_label:"Proxy URL" cfg_desc:"HTTP proxy URL (leave empty for direct connection)"`
+
+	// VerifySSL enables SSL certificate verification.
+	VerifySSL bool `json:"verifySSL" mapstructure:"verifySSL" koanf:"verifySSL" cfg_label:"Verify SSL" cfg_desc:"Verify SSL certificates (disable for self-signed)"`
+}
+
+// NotificationsConfig contains notification preferences.
+type NotificationsConfig struct {
+	// EnableNotifications controls whether notifications are shown.
+	EnableNotifications bool `json:"enableNotifications" mapstructure:"enableNotifications" koanf:"enableNotifications" cfg_label:"Enable Notifications" cfg_desc:"Show desktop notifications"`
+
+	// SoundEnabled controls notification sounds.
+	SoundEnabled bool `json:"soundEnabled" mapstructure:"soundEnabled" koanf:"soundEnabled" cfg_label:"Notification Sound" cfg_desc:"Play sound with notifications"`
+
+	// NotifyOnError sends notifications on errors.
+	NotifyOnError bool `json:"notifyOnError" mapstructure:"notifyOnError" koanf:"notifyOnError" cfg_label:"Error Notifications" cfg_desc:"Notify when errors occur"`
+
+	// NotifyOnComplete sends notifications when tasks complete.
+	NotifyOnComplete bool `json:"notifyOnComplete" mapstructure:"notifyOnComplete" koanf:"notifyOnComplete" cfg_label:"Completion Notifications" cfg_desc:"Notify when long tasks finish"`
+
+	// QuietHoursStart is the start of quiet hours (24h format, e.g., "22:00").
+	QuietHoursStart string `json:"quietHoursStart" mapstructure:"quietHoursStart" koanf:"quietHoursStart" cfg_label:"Quiet Hours Start" cfg_desc:"Start time for quiet hours (HH:MM format)"`
+
+	// QuietHoursEnd is the end of quiet hours (24h format, e.g., "07:00").
+	QuietHoursEnd string `json:"quietHoursEnd" mapstructure:"quietHoursEnd" koanf:"quietHoursEnd" cfg_label:"Quiet Hours End" cfg_desc:"End time for quiet hours (HH:MM format)"`
 }
 
 // AppConfig contains general application configuration.
@@ -94,12 +172,38 @@ func loadDefaults(k *koanf.Koanf) error {
 		"logLevel":      defaults.LogLevel,
 		"debug":         defaults.Debug,
 		"ui": map[string]any{
-			"mouseEnabled": defaults.UI.MouseEnabled,
-			"compactMode":  defaults.UI.CompactMode,
-			"outputFormat": defaults.UI.OutputFormat,
-			"dateFormat":   defaults.UI.DateFormat,
-			"themeName":    defaults.UI.ThemeName,
-			"showBanner":   defaults.UI.ShowBanner,
+			"mouseEnabled":    defaults.UI.MouseEnabled,
+			"compactMode":     defaults.UI.CompactMode,
+			"outputFormat":    defaults.UI.OutputFormat,
+			"dateFormat":      defaults.UI.DateFormat,
+			"themeName":       defaults.UI.ThemeName,
+			"showBanner":      defaults.UI.ShowBanner,
+			"animationSpeed":  defaults.UI.AnimationSpeed,
+			"showHelpBar":     defaults.UI.ShowHelpBar,
+			"language":        defaults.UI.Language,
+		},
+		"editor": map[string]any{
+			"editorCommand":     defaults.Editor.EditorCommand,
+			"tabWidth":          defaults.Editor.TabWidth,
+			"expandTabs":        defaults.Editor.ExpandTabs,
+			"autoSave":          defaults.Editor.AutoSave,
+			"autoSaveInterval":  defaults.Editor.AutoSaveInterval,
+			"showLineNumbers":   defaults.Editor.ShowLineNumbers,
+		},
+		"network": map[string]any{
+			"apiEndpoint": defaults.Network.APIEndpoint,
+			"timeout":     defaults.Network.Timeout,
+			"retryCount":  defaults.Network.RetryCount,
+			"proxyUrl":    defaults.Network.ProxyURL,
+			"verifySSL":   defaults.Network.VerifySSL,
+		},
+		"notifications": map[string]any{
+			"enableNotifications": defaults.Notifications.EnableNotifications,
+			"soundEnabled":        defaults.Notifications.SoundEnabled,
+			"notifyOnError":       defaults.Notifications.NotifyOnError,
+			"notifyOnComplete":    defaults.Notifications.NotifyOnComplete,
+			"quietHoursStart":     defaults.Notifications.QuietHoursStart,
+			"quietHoursEnd":       defaults.Notifications.QuietHoursEnd,
 		},
 		"app": map[string]any{
 			"name":        defaults.App.Name,

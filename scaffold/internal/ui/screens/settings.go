@@ -5,12 +5,13 @@ import (
 	"reflect"
 	"strings"
 
-	"charm.land/bubbles/v2/key"
-	tea "charm.land/bubbletea/v2"
-	"charm.land/huh/v2"
 	"scaffold/config"
 	"scaffold/internal/ui/modal"
 	"scaffold/internal/ui/theme"
+
+	"charm.land/bubbles/v2/key"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/huh/v2"
 )
 
 // reflectAccessor bridges reflect.Value to huh.Accessor[T].
@@ -215,7 +216,8 @@ func (s *Settings) FullHelp() [][]key.Binding {
 	return [][]key.Binding{{s.keys.Submit, s.keys.Reset}}
 }
 
-// buildFormForAllGroups constructs a single stacked huh.Form from all config groups.
+// buildFormForAllGroups constructs a huh.Form from all config groups.
+// Uses LayoutDefault for pagination (one group per page) to handle many fields.
 func buildFormForAllGroups(groups []config.GroupMeta) *huh.Form {
 	huhGroups := make([]*huh.Group, 0, len(groups))
 	for _, g := range groups {
@@ -226,11 +228,11 @@ func buildFormForAllGroups(groups []config.GroupMeta) *huh.Form {
 			}
 		}
 		if len(fields) > 0 {
-			huhGroups = append(huhGroups, huh.NewGroup(fields...).Title(g.Label))
+			huhGroups = append(huhGroups, huh.NewGroup(fields...).Title(g.Label).WithHeight(5))
 		}
 	}
 	if len(huhGroups) > 0 {
-		return huh.NewForm(huhGroups...).WithLayout(huh.LayoutStack)
+		return huh.NewForm(huhGroups...).WithLayout(huh.LayoutDefault)
 	}
 	return huh.NewForm()
 }
@@ -262,9 +264,40 @@ func buildField(m config.FieldMeta) huh.Field {
 		return huh.NewNote().
 			Title(m.Label + ": " + fmt.Sprint(m.Value.Interface()))
 	default: // FieldInput
-		return huh.NewInput().
-			Key(m.Key).Title(m.Label).
-			Inline(true).
-			Accessor(&reflectAccessor[string]{v: m.Value})
+		// Handle different types for input fields
+		switch m.Value.Kind() {
+		case reflect.Int:
+			return huh.NewInput().
+				Key(m.Key).Title(m.Label).
+				Inline(true).
+				Accessor(&intAccessor{v: m.Value})
+		case reflect.Bool:
+			return huh.NewConfirm().
+				Key(m.Key).Title(m.Label).
+				Affirmative("Yes").Negative("No").
+				Inline(true).
+				Accessor(&reflectAccessor[bool]{v: m.Value})
+		default: // string and others
+			return huh.NewInput().
+				Key(m.Key).Title(m.Label).
+				Inline(true).
+				Accessor(&reflectAccessor[string]{v: m.Value})
+		}
 	}
+}
+
+// intAccessor bridges reflect.Value for int fields to huh.Accessor[string].
+// It converts between int and string representation for huh.Input.
+type intAccessor struct {
+	v reflect.Value
+}
+
+func (a *intAccessor) Get() string {
+	return fmt.Sprintf("%d", a.v.Int())
+}
+
+func (a *intAccessor) Set(val string) {
+	var intVal int
+	fmt.Sscanf(val, "%d", &intVal)
+	a.v.SetInt(int64(intVal))
 }
