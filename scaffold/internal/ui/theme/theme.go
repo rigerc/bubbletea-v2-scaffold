@@ -158,6 +158,7 @@ type Palette struct {
 	Secondary       color.Color // secondary brand
 	SubtlePrimary   color.Color // muted primary, unfocused primary items
 	SubtleSecondary color.Color // muted secondary, unfocused secondary items
+	FocusBorder     color.Color // focus indicator border (defaults to Primary; override per theme for variation)
 
 	// Text (adaptive)
 	TextPrimary   color.Color // primary text
@@ -245,6 +246,7 @@ func buildPalette(base, sec color.Color, isDark bool) Palette {
 		Secondary:       secondary,
 		SubtlePrimary:   desaturateHcl(base, 0.30),
 		SubtleSecondary: desaturateHcl(secondary, 0.30),
+		FocusBorder:     primary,
 
 		TextPrimary:   ld(lipgloss.Color("#201F26"), lipgloss.Color("#F1EFEF")),
 		TextSecondary: ld(lipgloss.Color("#3A3943"), lipgloss.Color("#DFDBDD")),
@@ -345,7 +347,8 @@ func init() {
 			p.Error = lipgloss.Color("#FF3B3B")
 			p.Success = lipgloss.Color("#00FF85")
 			p.Warning = lipgloss.Color("#FFD60A")
-			p.Info = lipgloss.Color("#FF00C8") // Use secondary as info for neon aesthetic
+			p.Info = lipgloss.Color("#FF00C8")  // Use secondary as info for neon aesthetic
+			p.FocusBorder = lipgloss.Color("#FF00C8") // magenta focus border contrasts the cyan primary
 			return p
 		},
 	})
@@ -354,6 +357,28 @@ func init() {
 		Name:      "slate",
 		Base:      lipgloss.Color("#3A506B"),
 		Secondary: lipgloss.Color("#1C7ED6"),
+	})
+
+	// sakura — cherry blossom: warm pink primary, lavender secondary
+	RegisterTheme(ThemeSpec{
+		Name:      "sakura",
+		Base:      lipgloss.Color("#E87EA1"),
+		Secondary: lipgloss.Color("#9B72CF"),
+	})
+
+	// nord — arctic palette: polar night blue primary, frost cyan secondary
+	RegisterTheme(ThemeSpec{
+		Name:      "nord",
+		Base:      lipgloss.Color("#5E81AC"),
+		Secondary: lipgloss.Color("#88C0D0"),
+	})
+
+	// mono — monochrome minimal: mid-gray primary, lighter gray secondary
+	// Status colors (error/success/warning/info) remain colored for clarity.
+	RegisterTheme(ThemeSpec{
+		Name:      "mono",
+		Base:      lipgloss.Color("#787878"),
+		Secondary: lipgloss.Color("#A8A8A8"),
 	})
 }
 

@@ -77,6 +77,7 @@ type Settings struct {
 	groups    []config.GroupMeta
 	paginator paginator.Model
 	keys      settingsKeyMap
+	huhKeys   *huh.KeyMap
 	width     int
 	height    int
 }
@@ -99,6 +100,7 @@ func NewSettings(cfg config.Config) *Settings {
 
 	km := huh.NewDefaultKeyMap()
 	km.Quit = key.NewBinding(key.WithKeys("esc"), key.WithHelp("esc", "back"))
+	s.huhKeys = km
 
 	// Build form with only the first group
 	s.form = buildFormForGroup(s.groups[0]).
@@ -111,7 +113,7 @@ func NewSettings(cfg config.Config) *Settings {
 // RequiredHeight returns the minimum height needed to display the form.
 func (s *Settings) RequiredHeight() int {
 	const (
-		fieldHeight  = 3
+		fieldHeight  = 1
 		groupHeader  = 2
 		submitHeight = 2
 	)
@@ -243,7 +245,7 @@ func (s *Settings) Body() string {
 
 	// Style the header with secondary color
 	headerStyle := lipgloss.NewStyle().Foreground(s.Palette().Secondary).Bold(true)
-	header := headerStyle.Render(groupTitle + " " + pageInfo)
+	header := headerStyle.MarginBottom(1).Render(groupTitle + " " + pageInfo)
 
 	return header + "\n" + s.form.View() + "\n" + s.paginator.View()
 }
@@ -252,6 +254,7 @@ func (s *Settings) Body() string {
 func (s *Settings) rebuildFormForCurrentPage() tea.Cmd {
 	s.form = buildFormForGroup(s.groups[s.paginator.Page]).
 		WithTheme(theme.HuhTheme(s.ThemeState().Name)).
+		WithKeyMap(s.huhKeys).
 		WithWidth(s.width).
 		WithShowHelp(false)
 	if s.height > 0 {
@@ -297,21 +300,23 @@ func buildField(m config.FieldMeta) huh.Field {
 			opts[i] = huh.NewOption(strings.ToUpper(o[:1])+o[1:], o)
 		}
 		return huh.NewSelect[string]().
-			Key(m.Key).Title(m.Label).Description(m.Desc).
+			Key(m.Key).Title(m.Label).
+			Inline(true).
 			Options(opts...).
 			Accessor(&reflectAccessor[string]{v: m.Value})
 	case config.FieldConfirm:
 		return huh.NewConfirm().
-			Key(m.Key).Title(m.Label).Description(m.Desc).
+			Key(m.Key).Title(m.Label).
 			Affirmative("Yes").Negative("No").
+			Inline(true).
 			Accessor(&reflectAccessor[bool]{v: m.Value})
 	case config.FieldReadOnly:
 		return huh.NewNote().
-			Title(m.Label).
-			Description(fmt.Sprint(m.Value.Interface()))
+			Title(m.Label + ": " + fmt.Sprint(m.Value.Interface()))
 	default: // FieldInput
 		return huh.NewInput().
-			Key(m.Key).Title(m.Label).Description(m.Desc).
+			Key(m.Key).Title(m.Label).
+			Inline(true).
 			Accessor(&reflectAccessor[string]{v: m.Value})
 	}
 }
