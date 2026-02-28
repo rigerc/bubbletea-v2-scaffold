@@ -3,6 +3,7 @@ name: agent-generator
 description: This skill should be used when the user asks to "create an agent", "generate an agent", "build a new subagent", "make an agent for Claude Code", or wants to create autonomous agent configurations for Claude Code or plugins.
 version: 0.1.0
 allowed-tools: ["Read", "Grep", "Write", "Bash", "Edit", "AskUserQuestion"]
+disable-model-invocation: true
 ---
 
 ## Purpose
