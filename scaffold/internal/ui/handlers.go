@@ -74,7 +74,6 @@ func (m rootModel) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m, cmd
 	}
 	if key.Matches(msg, m.keys.Quit) {
-		m.cancel()
 		return m, tea.Quit
 	}
 	if key.Matches(msg, m.keys.RandomTheme) {

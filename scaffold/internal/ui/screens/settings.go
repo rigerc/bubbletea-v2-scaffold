@@ -100,11 +100,7 @@ func NewSettings(cfg config.Config) *Settings {
 	// Note: initTabStyles() is called by ApplyTheme which is invoked by handleNavigate
 
 	// Build single stacked form with all groups at a fixed height
-	s.form = buildFormForAllGroups(s.groups).
-		WithTheme(theme.HuhTheme(cfg.UI.ThemeName)).
-		WithKeyMap(km).
-		WithShowHelp(false).
-		WithHeight(s.RequiredHeight())
+	s.form = s.buildForm(cfg.UI.ThemeName)
 	return s
 }
 
@@ -215,9 +211,24 @@ func (s *Settings) SetHeight(h int) Screen {
 // ApplyTheme implements theme.Themeable.
 func (s *Settings) ApplyTheme(state theme.State) {
 	s.ApplyThemeState(state)
-	// Rebuild tab styles and form with new theme
 	s.initTabStyles()
-	s.form = s.form.WithTheme(theme.HuhTheme(state.Name))
+	// Rebuild the form so huh re-applies styles from the new theme.
+	// WithTheme alone does not re-style already-initialized fields.
+	// Accessor objects write directly to s.cfg, so current edits are preserved.
+	s.form = s.buildForm(state.Name)
+}
+
+// buildForm constructs the settings form with the given theme applied.
+func (s *Settings) buildForm(themeName string) *huh.Form {
+	f := buildFormForAllGroups(s.groups).
+		WithTheme(theme.HuhTheme(themeName)).
+		WithKeyMap(s.huhKeys).
+		WithShowHelp(false).
+		WithHeight(s.RequiredHeight())
+	if s.width > 0 {
+		f = f.WithWidth(s.width)
+	}
+	return f
 }
 
 // Init initializes the settings form.

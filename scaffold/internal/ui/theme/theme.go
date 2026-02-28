@@ -565,8 +565,8 @@ func newStylesFromPalette(p Palette, width int) Styles {
 
 	return Styles{
 		MaxWidth: maxWidth,
-		App:      lipgloss.NewStyle().Width(maxWidth).Padding(0, 0).Background(p.Background),
-		Header:   lipgloss.NewStyle().Padding(2).MarginBottom(0).PaddingBottom(0).Background(p.Surface),
+		App:    lipgloss.NewStyle().Width(maxWidth).Padding(0, 0),
+		Header: lipgloss.NewStyle().Padding(2).MarginBottom(0).PaddingBottom(0),
 		PlainTitle: lipgloss.NewStyle().
 			Bold(true).
 			Foreground(p.Primary).
@@ -643,7 +643,6 @@ func newModalStylesFromPalette(p Palette) ModalStyles {
 		Dialog: lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
 			BorderForeground(p.Primary).
-			Background(p.SurfaceRaised).
 			Padding(1, 2).
 			Width(52),
 	}
