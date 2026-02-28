@@ -15,7 +15,7 @@ require (
 	github.com/lsferreira42/figlet-go v0.0.2-beta
 	github.com/lucasb-eyer/go-colorful v1.3.0
 	github.com/spf13/cobra v1.9.1
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.1
 )
 
 require (
