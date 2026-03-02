@@ -80,6 +80,9 @@ type UIConfig struct {
 	// When false, a styled plain-text title is rendered instead.
 	ShowBanner bool `json:"showBanner" mapstructure:"showBanner" koanf:"showBanner" cfg_default:"true" cfg_label:"ASCII Banner" cfg_desc:"Show ASCII art banner in header"`
 
+	// ShowDescription controls whether the app description is shown below the header.
+	ShowDescription bool `json:"showDescription" mapstructure:"showDescription" koanf:"showDescription" cfg_default:"true" cfg_label:"Show Description" cfg_desc:"Show app description below the header"`
+
 	// AnimationSpeed controls the speed of UI animations.
 	AnimationSpeed string `json:"animationSpeed" mapstructure:"animationSpeed" koanf:"animationSpeed" cfg_default:"normal" cfg_label:"Animation Speed" cfg_desc:"Speed of transitions and animations" cfg_options:"slow,normal,fast,none"`
 

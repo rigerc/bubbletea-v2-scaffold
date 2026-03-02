@@ -19,6 +19,7 @@ type Model struct {
 	banner     string
 	headerSty  lipgloss.Style
 	titleSty   lipgloss.Style
+	descSty    lipgloss.Style
 	width      int
 	themeState theme.State // cached for banner re-renders after config changes
 }
@@ -56,14 +57,18 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		m.headerSty = lipgloss.NewStyle().
 			Padding(2).
 			MarginBottom(0).
-			PaddingBottom(0)
+			PaddingBottom(3)
 
 		m.titleSty = lipgloss.NewStyle().
 			Bold(true).
 			Foreground(p.Primary).
 			Border(lipgloss.NormalBorder(), false, false, true, false).
-			BorderForeground(p.Secondary).
-			PaddingBottom(1)
+			BorderForeground(p.Secondary)
+
+		m.descSty = lipgloss.NewStyle().
+			Foreground(p.Secondary).
+			Bold(true).
+			MarginLeft(3)
 
 		if m.cfg.UI.ShowBanner {
 			m.banner = renderBannerStr(m.cfg, msg.State)
@@ -80,10 +85,16 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 // been rendered, and the terminal is wide enough. Otherwise a plain title is
 // shown.
 func (m Model) View() tea.View {
+	var heading string
 	if m.cfg.UI.ShowBanner && m.banner != "" && m.width > 0 && m.width >= lipgloss.Width(m.banner) {
-		return tea.NewView(m.headerSty.Render(m.banner))
+		heading = m.banner
+	} else {
+		heading = m.titleSty.Render(m.cfg.App.Name)
 	}
-	return tea.NewView(m.headerSty.Render(m.titleSty.Render(m.cfg.App.Name)))
+	if m.cfg.UI.ShowDescription && m.cfg.App.Description != "" {
+		heading += "\n" + m.descSty.Render(m.cfg.App.Description)
+	}
+	return tea.NewView(m.headerSty.Render(heading))
 }
 
 // Height returns the number of terminal lines the header occupies.
