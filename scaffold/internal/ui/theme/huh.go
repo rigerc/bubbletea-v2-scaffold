@@ -36,8 +36,14 @@ func HuhTheme(name string, labelWidth, descWidth int) huh.Theme {
 		s.Focused.ErrorIndicator = s.Focused.ErrorIndicator.Foreground(p.Error)
 		s.Focused.ErrorMessage = s.Focused.ErrorMessage.Foreground(p.Error)
 		s.Focused.SelectSelector = s.Focused.SelectSelector.Foreground(p.Focus)
+		// PrevIndicator is used by Select inline carousel (← Option →).
+		// PaddingLeft pushes the carousel so the option value aligns with
+		// Input/Confirm values. Subtract the indicator's own width (← + margin)
+		// so the option text, not the arrow, hits the target column.
+		//prevWidth := lipgloss.Width(s.Focused.PrevIndicator.String())
+		selectIndent := max(labelWidth+descWidth, 0)
 		s.Focused.NextIndicator = s.Focused.NextIndicator.Foreground(p.Primary)
-		s.Focused.PrevIndicator = s.Focused.PrevIndicator.Foreground(p.Primary)
+		s.Focused.PrevIndicator = s.Focused.PrevIndicator.Foreground(p.Primary).PaddingLeft(selectIndent).AlignHorizontal(lipgloss.Left)
 		s.Focused.Option = s.Focused.Option.Foreground(p.ForegroundSubtle)
 		s.Focused.MultiSelectSelector = s.Focused.MultiSelectSelector.Foreground(p.Primary)
 		s.Focused.SelectedOption = s.Focused.SelectedOption.Foreground(p.OnPrimary).Background(p.Primary).Padding(0, 1)
@@ -62,7 +68,9 @@ func HuhTheme(name string, labelWidth, descWidth int) huh.Theme {
 		s.Blurred.Card = s.Blurred.Base
 		s.Blurred.SelectedOption = s.Blurred.SelectedOption.Foreground(p.ForegroundMuted).Background(p.PrimaryMuted).Padding(0, 1)
 		s.Blurred.NextIndicator = lipgloss.NewStyle().Foreground(p.ForegroundSubtle)
-		s.Blurred.PrevIndicator = lipgloss.NewStyle().Foreground(p.ForegroundSubtle)
+		//blurredPrevWidth := lipgloss.Width(s.Blurred.PrevIndicator.String())
+		blurredIndent := max(labelWidth+descWidth, 0)
+		s.Blurred.PrevIndicator = lipgloss.NewStyle().Foreground(p.ForegroundSubtle).PaddingLeft(blurredIndent)
 
 		s.Group.Title = s.Focused.Title.Margin(1).Underline(true)
 		s.Group.Description = s.Focused.Description
