@@ -27,7 +27,8 @@
       "Bash(wc:*)",
       "Skill(teatest-v2)",
       "WebSearch",
-      "Skill(cobra)"
+      "Skill(cobra)",
+      "Bash(ls:*)"
     ]
   }
 }
