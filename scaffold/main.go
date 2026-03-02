@@ -53,7 +53,7 @@ func main() {
 		}
 	}()
 
-	firstRun := config.IsFirstRun(configPath)
+	firstRun := config.IsFirstRun(configPath) && !cmd.SkipWelcome()
 	logger.Debug("first run: %v", firstRun)
 	logger.Debug("starting UI")
 
