@@ -9,6 +9,7 @@ import (
 	"scaffold/internal/ui/theme"
 
 	"charm.land/huh/v2"
+	"charm.land/lipgloss/v2"
 )
 
 // reflectAccessor bridges reflect.Value to huh.Accessor[T].
@@ -40,14 +41,38 @@ func (a *intAccessor) Set(val string) {
 	a.v.SetInt(int64(intVal))
 }
 
+// computeAlignmentWidths returns the maximum title and description column
+// widths for a group. Title width includes the ":" suffix.
+func computeAlignmentWidths(group config.GroupMeta) (titleW, descW int) {
+	for _, f := range group.Fields {
+		if tw := lipgloss.Width(f.Label); tw > titleW {
+			titleW = tw
+		}
+		if dw := lipgloss.Width(f.Desc); dw > descW {
+			descW = dw
+		}
+	}
+	return titleW, descW
+}
+
+// minControlWidth is the minimum width reserved for the interactive control column.
+const minControlWidth = 20
+
 // buildFormForAllGroups constructs a huh.Form from all config groups.
 // Uses LayoutDefault for pagination (one group per page) to handle many fields.
+// The form width is set dynamically based on the widest group's alignment needs.
 func buildFormForAllGroups(groups []config.GroupMeta) *huh.Form {
 	huhGroups := make([]*huh.Group, 0, len(groups))
+	var maxOverhead int
 	for _, g := range groups {
+		titleW, descW := computeAlignmentWidths(g)
+		a := fieldAlignment{titleW: titleW, descW: descW}
+		if oh := a.alignmentOverhead(); oh > maxOverhead {
+			maxOverhead = oh
+		}
 		fields := make([]huh.Field, 0, len(g.Fields))
 		for _, fm := range g.Fields {
-			if f := buildField(fm); f != nil {
+			if f := buildField(fm, titleW, descW); f != nil {
 				fields = append(fields, f)
 			}
 		}
@@ -56,13 +81,18 @@ func buildFormForAllGroups(groups []config.GroupMeta) *huh.Form {
 		}
 	}
 	if len(huhGroups) > 0 {
-		return huh.NewForm(huhGroups...).WithLayout(huh.LayoutDefault).WithWidth(100)
+		formWidth := maxOverhead + minControlWidth
+		return huh.NewForm(huhGroups...).
+			WithLayout(huh.LayoutDefault).
+			WithWidth(formWidth)
 	}
 	return huh.NewForm()
 }
 
-// buildField maps a single FieldMeta to a huh.Field.
-func buildField(m config.FieldMeta) huh.Field {
+// buildField maps a single FieldMeta to a huh.Field wrapped in an aligned
+// container so that title, description, and control columns align vertically
+// across all fields in a group.
+func buildField(m config.FieldMeta, titleW, descW int) huh.Field {
 	switch m.Kind {
 	case config.FieldSelect:
 		options := m.Options
@@ -73,36 +103,39 @@ func buildField(m config.FieldMeta) huh.Field {
 		for i, o := range options {
 			opts[i] = huh.NewOption(strings.ToUpper(o[:1])+o[1:], o)
 		}
-		// Use inlineSelect wrapper to render label/desc on same line as options
 		sel := huh.NewSelect[string]().
 			Key(m.Key).
 			Options(opts...).Inline(true).
 			Accessor(&reflectAccessor[string]{v: m.Value})
-		return newInlineSelect(m.Label, m.Desc, sel)
+		return newInlineSelect(m.Label, m.Desc, titleW, descW, sel)
 	case config.FieldConfirm:
-		return huh.NewConfirm().
-			Key(m.Key).Title(m.Label).Description(m.Desc).
+		confirm := huh.NewConfirm().
+			Key(m.Key).
 			Affirmative("Yes").Negative("No").Inline(true).
 			Accessor(&reflectAccessor[bool]{v: m.Value})
+		return newAlignedField(m.Label, m.Desc, titleW, descW, confirm)
 	case config.FieldReadOnly:
-		return huh.NewNote().
-			Title(m.Label + ": " + fmt.Sprint(m.Value.Interface()))
+		note := huh.NewNote().
+			Title(fmt.Sprint(m.Value.Interface()))
+		return newAlignedField(m.Label, m.Desc, titleW, descW, note)
 	default: // FieldInput
-		// Handle different types for input fields
 		switch m.Value.Kind() {
 		case reflect.Int:
-			return huh.NewInput().
-				Key(m.Key).Title(m.Label).Description(m.Desc).Inline(true).
+			input := huh.NewInput().
+				Key(m.Key).Inline(true).
 				Accessor(&intAccessor{v: m.Value})
+			return newAlignedField(m.Label, m.Desc, titleW, descW, input)
 		case reflect.Bool:
-			return huh.NewConfirm().
-				Key(m.Key).Title(m.Label).Description(m.Desc).Inline(true).
+			confirm := huh.NewConfirm().
+				Key(m.Key).Inline(true).
 				Affirmative("Yes").Negative("No").
 				Accessor(&reflectAccessor[bool]{v: m.Value})
+			return newAlignedField(m.Label, m.Desc, titleW, descW, confirm)
 		default: // string and others
-			return huh.NewInput().
-				Key(m.Key).Title(m.Label).Description(m.Desc).Inline(true).
+			input := huh.NewInput().
+				Key(m.Key).Inline(true).
 				Accessor(&reflectAccessor[string]{v: m.Value})
+			return newAlignedField(m.Label, m.Desc, titleW, descW, input)
 		}
 	}
 }

@@ -8,25 +8,28 @@ import (
 )
 
 // inlineSelect wraps huh.Select to render label, description, and options
-// on a single line for compact settings forms.
+// on a single line for compact settings forms with column alignment.
 // Navigation is delegated to the underlying Select via Update().
 type inlineSelect struct {
 	*huh.Select[string]
 
-	label       string
-	description string
-	width       int
-	focused     bool
-	theme       huh.Theme
-	hasDarkBg   bool
+	alignment fieldAlignment
+	width     int
+	focused   bool
+	theme     huh.Theme
+	hasDarkBg bool
 }
 
-// newInlineSelect creates an inline select field with label and description.
-func newInlineSelect(label, description string, select_ *huh.Select[string]) *inlineSelect {
+// newInlineSelect creates an inline select field with alignment support.
+func newInlineSelect(label, desc string, titleW, descW int, sel *huh.Select[string]) *inlineSelect {
 	return &inlineSelect{
-		Select:      select_,
-		label:       label,
-		description: description,
+		Select: sel,
+		alignment: fieldAlignment{
+			label:  label,
+			desc:   desc,
+			titleW: titleW,
+			descW:  descW,
+		},
 	}
 }
 
@@ -37,9 +40,8 @@ func (f *inlineSelect) Init() tea.Cmd {
 
 // Update handles messages - delegates to underlying Select for navigation.
 func (f *inlineSelect) Update(msg tea.Msg) (huh.Model, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.BackgroundColorMsg:
-		f.hasDarkBg = msg.IsDark()
+	if bgMsg, ok := msg.(tea.BackgroundColorMsg); ok {
+		f.hasDarkBg = bgMsg.IsDark()
 	}
 
 	m, cmd := f.Select.Update(msg)
@@ -49,46 +51,23 @@ func (f *inlineSelect) Update(msg tea.Msg) (huh.Model, tea.Cmd) {
 	return f, cmd
 }
 
-// View renders the field with label, description, and select options on one line.
+// View renders the field with aligned title, description, and select options.
 func (f *inlineSelect) View() string {
 	styles := f.activeStyles()
-
-	// Render our own inline select view using the Select's current value
 	selectView := f.renderInlineOptions(styles)
-
-	// Build inline layout: "Label: description [‹ Option ›]"
-	var parts []string
-
-	if f.label != "" {
-		parts = append(parts, styles.Title.Render(f.label+":"))
-	}
-
-	if f.description != "" {
-		parts = append(parts, styles.Description.Render(f.description))
-	}
-
-	parts = append(parts, selectView)
-
-	line := lipgloss.JoinHorizontal(lipgloss.Left, parts...)
-
-	return styles.Base.Width(f.width).Render(line)
+	aligned := f.alignment.renderAligned(styles, selectView)
+	return styles.Base.Width(f.width).Render(aligned)
 }
 
 // renderInlineOptions renders the select options inline with prev/next indicators.
 func (f *inlineSelect) renderInlineOptions(styles *huh.FieldStyles) string {
-	// Get the current value from the select
 	value := f.Select.GetValue()
 	valueStr, _ := value.(string)
-
-	// Get display name for the value - try to get the option key
 	displayValue := valueStr
-	// The Select stores options internally but doesn't expose them
-	// We'll just use the value directly
 
 	prevIndicator := "‹"
 	nextIndicator := "›"
 
-	// Style the indicators
 	prevStyle := styles.PrevIndicator
 	nextStyle := styles.NextIndicator
 
@@ -157,10 +136,16 @@ func (f *inlineSelect) WithKeyMap(k *huh.KeyMap) huh.Field {
 	return f
 }
 
-// WithWidth sets the width.
+// WithWidth sets the width and adjusts the select control width.
 func (f *inlineSelect) WithWidth(width int) huh.Field {
 	f.width = width
-	f.Select = f.Select.WithWidth(width).(*huh.Select[string])
+	styles := f.activeStyles()
+	baseFrame := styles.Base.GetHorizontalFrameSize()
+	controlWidth := width - baseFrame - f.alignment.alignmentOverhead()
+	if controlWidth < 10 {
+		controlWidth = 10
+	}
+	f.Select = f.Select.WithWidth(controlWidth).(*huh.Select[string])
 	return f
 }
 
