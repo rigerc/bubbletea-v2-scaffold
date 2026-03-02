@@ -126,11 +126,7 @@ func (s *Settings) buildForm(themeName string) *huh.Form {
 	f := buildFormForAllGroups(s.groups).
 		WithTheme(theme.HuhTheme(themeName, maxLabelWidth(s.groups), maxDescWidth(s.groups))).
 		WithKeyMap(s.huhKeys).
-		WithShowHelp(false).
-		WithHeight(1)
-	if s.width > 0 {
-		f = f.WithWidth(s.width)
-	}
+		WithShowHelp(false)
 	if s.height > 0 {
 		formH := s.RequiredHeight()
 		if s.height < formH {

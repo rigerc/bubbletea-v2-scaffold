@@ -42,6 +42,7 @@ func (a *intAccessor) Set(val string) {
 
 // buildFormForAllGroups constructs a huh.Form from all config groups.
 // Uses LayoutDefault for pagination (one group per page) to handle many fields.
+// Fields within each group are sized to the width of the largest field.
 func buildFormForAllGroups(groups []config.GroupMeta) *huh.Form {
 	huhGroups := make([]*huh.Group, 0, len(groups))
 	for _, g := range groups {
@@ -52,6 +53,11 @@ func buildFormForAllGroups(groups []config.GroupMeta) *huh.Form {
 			}
 		}
 		if len(fields) > 0 {
+			// Calculate max field width in this group and apply to all fields
+			maxW := maxFieldWidth(g.Fields)
+			for _, f := range fields {
+				f.WithWidth(maxW)
+			}
 			huhGroups = append(huhGroups, huh.NewGroup(fields...))
 		}
 	}
@@ -131,4 +137,69 @@ func maxDescWidth(groups []config.GroupMeta) int {
 		}
 	}
 	return max
+}
+
+// maxFieldWidth returns the width of the largest field in the group.
+// This is used to align all fields to the same width for a consistent layout.
+func maxFieldWidth(fields []config.FieldMeta) int {
+	max := 0
+	for _, f := range fields {
+		w := fieldContentWidth(f)
+		if w > max {
+			max = w
+		}
+	}
+	return max
+}
+
+// fieldContentWidth estimates the natural width of a field based on its content.
+// Layout: "Label: description [value]" for inline fields.
+func fieldContentWidth(f config.FieldMeta) int {
+	const (
+		labelSep    = 2 // ": " after label
+		descSep     = 1 // space before/after description
+		indicators  = 5 // "‹ " and " ›" for inline select
+		framePad    = 4 // Base style padding
+		valuePad    = 4 // Padding around value
+	)
+
+	w := len(f.Label) + labelSep
+
+	// Add description width
+	if f.Desc != "" {
+		w += len(f.Desc) + descSep
+	}
+
+	// Add value width based on field type
+	switch f.Kind {
+	case config.FieldSelect:
+		// Find the longest option
+		maxOpt := 0
+		for _, opt := range f.Options {
+			if len(opt) > maxOpt {
+				maxOpt = len(opt)
+			}
+		}
+		w += maxOpt + indicators
+	case config.FieldConfirm:
+		// "Yes" or "No" buttons
+		w += 6 // "Yes" + space + "No"
+	case config.FieldReadOnly:
+		// Display the actual value
+		w += len(fmt.Sprint(f.Value.Interface()))
+	default:
+		// Input fields - estimate based on current value or default
+		val := ""
+		if f.Value.Kind() == reflect.String {
+			val = f.Value.String()
+		} else if f.Value.Kind() == reflect.Int {
+			val = fmt.Sprintf("%d", f.Value.Int())
+		}
+		if len(val) == 0 {
+			val = "____" // placeholder estimate
+		}
+		w += len(val) + valuePad
+	}
+
+	return w + framePad
 }
