@@ -1,7 +1,7 @@
 Output scaffold.gif
 
 Set Width 1920
-Set Height 1080
+Set Height 1200
 Set FontSize 32
 Set Framerate 30
 
@@ -11,20 +11,20 @@ Enter
 Sleep 5
 
 Ctrl+t
-Sleep 1
+Sleep 500ms
 
 Ctrl+t
-Sleep 1
+Sleep 500ms
 
 Ctrl+t
-Sleep 1
+Sleep 500ms
 
 Ctrl+t
-Sleep 1
+Sleep 500ms
 
 Down
 Enter
-Sleep 2
+Sleep 1
 
 Tab 10
 Sleep 1
@@ -41,4 +41,4 @@ Down@500ms 3
 Enter
 Sleep 5
 Escape
-Sleep 10
+Sleep 2
