@@ -4,7 +4,7 @@ go 1.26
 
 require (
 	charm.land/bubbles/v2 v2.0.0
-	charm.land/bubbletea/v2 v2.0.0
+	charm.land/bubbletea/v2 v2.0.2
 	charm.land/huh/v2 v2.0.0-20260105203756-d8977490d20c
 	charm.land/lipgloss/v2 v2.0.0
 	github.com/knadh/koanf/parsers/json v1.0.0
